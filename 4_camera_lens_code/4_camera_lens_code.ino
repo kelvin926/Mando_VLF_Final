@@ -32,7 +32,7 @@ int flag_line_adapation;          // 라인센서 확인을 위한 플래그 변
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
 #define RC_SERVO_PIN 8 //8번핀 할당
 #define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
-#define LEFT_STEER_ANGLE - 30 //좌측 스티어링 각도 지정
+#define LEFT_STEER_ANGLE -30 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
 
 Servo Steeringservo; //서보를 사용하는 함수를 미리 선언
@@ -41,7 +41,7 @@ int Steering_Angle = NEURAL_ANGLE;//기본 스티어링 값 기본값으로 지�
 void setup() {
   // put your setup code here, to run once:
   int i;
-
+ 
   for (i = 0; i < NPIXELS; i++)
   {
     LineSensor_Data[i] = 0; // 이미지를 나타내는 전체 픽셀들 오리지널 데이터를 0으로 초기화
@@ -85,17 +85,6 @@ void line_adaptation(void) // 라인 보정부
     if (LineSensor_Data[i] <= MIN_LineSensor_Data[i])  MIN_LineSensor_Data[i] = LineSensor_Data[i]; //센서 데이터가 이전의 최소 데이터보다 작을 경우, 최소 데이터를 센서 데이터로 입력
   }
 
-  /*for (i = 0; i < NPIXELS; i++)
-    {
-    Serial.print("[");
-    Serial.print(i);
-    Serial.print("]");
-    Serial.print("   : ");
-    Serial.print(MAX_LineSensor_Data[i]);
-    Serial.print(" | ");
-    Serial.print(MIN_LineSensor_Data[i]);
-    Serial.println(" ");
-    }*/
 }
 void read_line_sensor(void) //라인 센싱부
 {
@@ -143,18 +132,11 @@ void loop() {
 */
   for (i = 0; i < NPIXELS; i++)
   {
-    if (digitalRead(CLKpin) == LOW) // 카메라 데이터 송수신 동기화 X (이미 끝난 상태)
-    {
-      Serial.print(LineSensor_Data_Adaption[i]); // 보정된 데이터를 시리얼에 출력함
-    }
-    else // 카메라 데이터 송수신 동기화 중임. 
-    {
-      Serial.print ((byte)Pixel[i] + 1); //다음 픽셀 값을 출력함. 위에 픽셀값 넣는 반목문을 보면, CLK핀이 High일 경우 바로 다음에 i값이 올라가서 다음 픽셀 값을 가지게 됨. 따라서 1을 더해 다음 픽셀 값을 출력하는 것.
-      // CLK값이 LOW라는 것은 해당 픽셀 값에 넣고, 1ms간 대기 중이라는 것이기에, 그냥 보정값을 출력하는 것. 이해가 될지 모르겠돠,,
-    }
-    Serial.print("  ");
+    if (digitalRead(CLKpin) == LOW)      Serial.print(LineSensor_Data_Adaption[i]); // Serial.print(LineSensor_Data[i] );
+    else                                 Serial.print ((byte)Pixel[i] + 1);
+    Serial.print(" ");
   }
 
-  Serial.println(" 점프 ");
+  Serial.println("  ");
   delay(100);
 }

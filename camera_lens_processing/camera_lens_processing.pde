@@ -16,10 +16,11 @@ void setup()
   delay(1000);  
 
   println(Serial.list()); 
-  portName= Serial.list()[0];
+  portName= Serial.list()[0]; //잡히는 첫번째 포트를 포트 이름으로 함.
 
 
-  myPort = new Serial(this, "/dev/cu.usbserial-1130", 115200); //실제 값을 받은 아두이노와 연결된 포트를 설정합니다.
+  myPort = new Serial(this, "/dev/cu.usbserial-1130", 115200); //맥북은 위에 포트네임 코드로 작동을 안해서, 직접 입력했음.
+  //myPort = new Serial(this, portName, 115200);
 }
 
 void draw() 
@@ -38,7 +39,7 @@ void draw()
 /*
 void serialEvent(Serial p) 
  { 
- 
+
  String message = myPort.readStringUntil(10); //시리얼 포트에 있는 데이터 값은 엔터가 입력될 때 
  if (message != null) //까지 받습니다. 만약 데이터가 있으면 
  { 

@@ -41,7 +41,7 @@ int Steering_Angle = NEURAL_ANGLE;//기본 스티어링 값 기본값으로 지�
 void setup() {
   // put your setup code here, to run once:
   int i;
- 
+
   for (i = 0; i < NPIXELS; i++)
   {
     LineSensor_Data[i] = 0; // 이미지를 나타내는 전체 픽셀들 오리지널 데이터를 0으로 초기화

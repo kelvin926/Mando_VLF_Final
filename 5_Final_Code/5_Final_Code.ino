@@ -95,11 +95,51 @@ int Steering_Angle = NEURAL_ANGLE;//기본 스티어링 값 기본값으로 지�
 
 void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 {
-    if(steer_angle>=RIGHT_STEER_ANLGE) steer_angle = RIGHT_STEER_ANLGE; //스티어링 앵글 값이 오른쪽 스티어링 값 이상일 경우, 앵글에 오른쪽 스티어링 값 넣음 
-    if(steer_angle<=LEFT_STEER_ANLGE)  steer_angle = LEFT_STEER_ANLGE; //이 코드도 위랑 비슷하게 작동
+    if(steer_angle>=RIGHT_STEER_ANGLE) steer_angle = RIGHT_STEER_ANGLE; //스티어링 앵글 값이 오른쪽 스티어링 값 이상일 경우, 앵글에 오른쪽 스티어링 값 넣음 
+    if(steer_angle<=LEFT_STEER_ANGLE)  steer_angle = LEFT_STEER_ANGLE; //이 코드도 위랑 비슷하게 작동
     Steeringservo.write(NEURAL_ANGLE + steer_angle);  // 기본값(90도)에 앵글 값 대입하여 스티어링 작동 
 }
 // -------------------------------- 서보모터 초기 설정 끝 --------------------------------
+
+
+
+// -------------------------------- 이진화 시스템 시작 --------------------------------
+#define threshold_value 180
+void threshold(void)
+{
+    int i;
+    for (i = 0; i < NPIXELS; i++)
+    { //세부 내용은 라인센싱부 주석을 참고하세유
+        if((byte)Pixel[i] >= threshold_value)
+            LineSensor_Data_Adaption[i] = 255;
+        else
+            LineSensor_Data_Adaption[i] = 0;
+    }
+}
+// -------------------------------- 이진화 시스템 끝 --------------------------------
+
+
+
+// -------------------------------- 센터링(무게중심) 시스템 시작 --------------------------------
+#define camera_pixel_offset 0 //센터가 0이 출력되도록 보정해주는 값 (수정 필요)
+void steering_by_camera(void)
+{
+    int i;
+    long sum = 0;
+    long x_xum = 0;
+    int steer_data = 0;
+    for (i = 0; i < NPIXELS; i++)
+    {
+        sum += LineSensor_Data_Adaption[i];
+        x_xum += LineSensor_Data_Adaption[i] * i;
+    }
+    steer_data = (x_xum/sum) - NPIXELS/2 + camera_pixel_offset;
+
+    steering_control(steer_data*2); // 곱하는 값은 가중치.
+
+    Serial.println(steer_data);
+}
+// -------------------------------- (무게중심) 시스템 끝 --------------------------------
 
 
 
@@ -153,16 +193,26 @@ void setup() {
 void loop() { 
     int i;
     read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
+    motor_control(1, 50); //1의 방향으로 50의 속도만큼
 
+    threshold(); // 이진화 함수
+    steering_by_camera(); //센터링(무게중심) 함수
     for (i = 0; i < NPIXELS; i++) //i에 픽셀 배열 순서 값이 촥촥 들어가겠죵..?
     {
+
+        // 이진수 데이터가 아닌 RAW데이터를 확인 할 때에는 이 코드들을 살리기! + 이진화 함수 내용 끄기
+        /*
         if (digitalRead(CLKpin) == LOW) // 카메라 데이터 송수신 동기화 X (이미 끝난 상태)
             Serial.print(LineSensor_Data_Adaption[i]); // 보정된 데이터를 시리얼에 출력함
         else // 카메라 데이터 송수신 동기화 중임. 
             Serial.print ((byte)Pixel[i] + 1); 
                 //다음 픽셀 값을 출력함. 위에 픽셀값 넣는 반목문을 보면, CLK핀이 High일 경우 바로 다음에 i값이 올라가서 다음 픽셀 값을 가지게 됨. 따라서 1을 더해 다음 픽셀 값을 출력하는 것.
                 // CLK값이 LOW라는 것은 해당 픽셀 값에 넣고, 1ms간 대기 중이라는 것이기에, 그냥 보정값을 출력하는 것. 이해가 될지 모르겠돠,,
-        Serial.print(" ");
+        */
+
+        // 프로세싱으로 라인 검출 데이터를 확인해야한다면 해당 코드를 살리기!
+        // Serial.print(LineSensor_Data_Adaption[i]);
+        // Serial.print(" ");
     }
 
     Serial.println("  ");

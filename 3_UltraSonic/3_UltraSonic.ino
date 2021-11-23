@@ -34,7 +34,8 @@ void serial_com(void)
 {
   if(DEBUG != 1) return;
 
-  Serial.print("Sonar : "); Serial.println(UltrasonicSensorData[0]);
+  Serial.print("Sonar : ");
+  Serial.println(UltrasonicSensorData[0]);
 }
 /////////////////////  초음파 끝 ///////////////////
 
@@ -58,9 +59,9 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
    UltrasonicSensorData[0]= sonar[0].ping_cm(); //해당 배열에 첫번째 초음파 센서를 이용한 cm단위의 값을 넣음
 
    if(UltrasonicSensorData[0] == 0.0) //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
-   {
+  {
     UltrasonicSensorData[0] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
-   }
+  }
 }
 ///////////////// 초음파 끝 ///////////////
 
@@ -88,22 +89,6 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 
 void loop() {
   // put your main code here, to run repeatedly:
- 
   read_ultrasonic_sensor(); //초음파 센서 값 리딩 
   serial_com(); //시리얼에 계속 띄움.
 }
-
- 
-
-  
-
- 
-
- 
-
- 
-
- 
- 
-
- 

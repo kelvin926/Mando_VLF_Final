@@ -193,7 +193,7 @@ void setup() {
 void loop() { 
     int i;
     read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
-    motor_control(1, 50); //1의 방향으로 50의 속도만큼
+    motor_control(0, 50); //1의 방향으로 50의 속도만큼
 
     threshold(); // 이진화 함수
     steering_by_camera(); //센터링(무게중심) 함수

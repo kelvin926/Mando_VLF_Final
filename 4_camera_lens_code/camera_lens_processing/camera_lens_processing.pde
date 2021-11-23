@@ -21,7 +21,7 @@ void setup()
   portName= Serial.list()[0]; //잡히는 첫번째 포트를 포트 이름으로 함.
 
 
-  myPort = new Serial(this, "/dev/cu.usbserial-1130", 115200); //맥북은 위에 포트네임 코드로 작동을 안해서, 직접 입력했음.
+  myPort = new Serial(this, "/dev/cu.usbserial-10", 115200); //맥북은 위에 포트네임 코드로 작동을 안해서, 직접 입력했음.
   //myPort = new Serial(this, portName, 115200);
 }
 

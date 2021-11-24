@@ -149,6 +149,38 @@ void steering_by_camera(void)
 
 
 
+///////////////// 초음파  //////////////
+#define DEBUG 1
+#include <NewPing.h> //초음파 관련 헤더파일임! (설치 필요)
+#define SONAR_NUM 1 //초음파 센서 번호를 부여 (1번)
+#define MAX_DISTANCE 150 //cm단위 최대 값 (초음파 최대값)
+float UltrasonicSensorData[SONAR_NUM];//센서 데이터 1차배열 생성(실수)
+
+NewPing sonar[SONAR_NUM] = {   // 초음파센서 배열 생성 
+  NewPing(9, 10, MAX_DISTANCE)  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정)
+};
+
+void serial_com(void)
+{
+    if(DEBUG != 1) return;
+
+    Serial.print("Sonar : ");
+    Serial.println(UltrasonicSensorData[0]);
+}
+
+void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수 
+{
+   UltrasonicSensorData[0]= sonar[0].ping_cm(); //해당 배열에 첫번째 초음파 센서를 이용한 cm단위의 값을 넣음
+
+   if(UltrasonicSensorData[0] == 0.0) //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
+    {
+        UltrasonicSensorData[0] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
+    }
+}
+///////////////// 초음파 끝 ///////////////
+
+
+
 // -------------------------------- 셋업 START --------------------------------
 void setup() {
     // -------------------------------- 카메라/라인센싱 셋업 부분 시작 ------------------------------
@@ -196,7 +228,10 @@ void setup() {
 
 
 // -------------------------------- 루프 START --------------------------------
-void loop() { 
+void loop() {
+    read_ultrasonic_sensor(); //초음파 센서 값 리딩 
+    serial_com(); //초음파 값 시리얼에 계속 띄움.
+
     int i;
     read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
     motor_control(0, 50); //1의 방향으로 50의 속도만큼

@@ -4,8 +4,8 @@
 ///////////////// 스티어링 서보모터 컨트롤부 /////////////
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
 #define RC_SERVO_PIN 8 //8번핀 할당
-#define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
-#define LEFT_STEER_ANGLE - 30 //좌측 스티어링 각도 지정
+#define NEURAL_ANGLE 115 //기본 앵글: 90도 -> 전방 방향
+#define LEFT_STEER_ANGLE - 40 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
 
 Servo Steeringservo; //서보를 사용하는 함수를 미리 선언
@@ -49,6 +49,8 @@ void loop() {
 //  }
 ///////////////// 스티어링 서보모터 컨트롤부 /////////////
   steering_control(LEFT_STEER_ANGLE); //왼쪽으로~~
+  delay(1000);
+  steering_control(0); //중앙으로~~
   delay(1000);
   steering_control(RIGHT_STEER_ANGLE); //오른쪽으로~~
   delay(1000);

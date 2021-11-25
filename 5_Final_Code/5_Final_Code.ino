@@ -29,27 +29,28 @@ void line_adaptation(void) // 라인 보정부
     int i;
     for (i = 0; i < NPIXELS; i++)
     {
-        if (LineSensor_Data[i] >= MAX_LineSensor_Data[i])  MAX_LineSensor_Data[i] = LineSensor_Data[i]; //센서 데이터가 이전의 최대 데이터보다 클 경우, 최대 데이터를 센서 데이터로 입력
-        if (LineSensor_Data[i] <= MIN_LineSensor_Data[i])  MIN_LineSensor_Data[i] = LineSensor_Data[i]; //센서 데이터가 이전의 최소 데이터보다 작을 경우, 최소 데이터를 센서 데이터로 입력
+        if (LineSensor_Data[i] >= MAX_LineSensor_Data[i])
+            MAX_LineSensor_Data[i] = LineSensor_Data[i]; //센서 데이터가 이전의 최대 데이터보다 클 경우, 최대 데이터를 센서 데이터로 입력
+        if (LineSensor_Data[i] <= MIN_LineSensor_Data[i])
+            MIN_LineSensor_Data[i] = LineSensor_Data[i]; //센서 데이터가 이전의 최소 데이터보다 작을 경우, 최소 데이터를 센서 데이터로 입력
     }
 }
 
 void read_line_sensor(void) //라인 센싱부
 {
     int i;
-    delayMicroseconds (1);  // 1ms만큼 일시중지
-    delay(10);              // 10ms만큼 일시중지 -> 근데 왜 이렇게 만든거지...? 일단 건들지 않겠으.
+    delayMicroseconds (10);  // 1ms만큼 일시중지
     digitalWrite (CLKpin, LOW); // CLK핀 대기상태 - 송수신 주기 X
     digitalWrite (SIpin, HIGH); // SI핀 작동상태 - 카메라 송수신 시작.
     digitalWrite (CLKpin, HIGH); // CLK핀 작동상태 - 카메라 송수신 주기 동기화 On
     digitalWrite (SIpin, LOW); //SI핀 대기상태 - 카메라 송수신 중단.
-    delayMicroseconds (1); //1ms 대기
+    delayMicroseconds (10); //1ms 대기
 
     for (i = 0; i < NPIXELS; i++)
     {
         Pixel[i] = analogRead (AOpin) / 4 ; // 8-bit is enough - 픽셀배열에 각 이미지 픽셀 값을 넣음
         digitalWrite (CLKpin, LOW); // CLK핀 대기상태 - 데이터 동기화 중지 (위 코드에서 High인 상태에서 해당 반복문이 시작되기에, 첫 픽셀은 기본으로 들어감.)
-        delayMicroseconds (1); // 1ms대기
+        delay(10); // 10ms대기
         digitalWrite (CLKpin, HIGH); //CLK핀 작동상태 - 데이터 동기화 시작 (이게, 데이터가 많으니까 한 픽셀에 들어갈 양만 clk값에 따라 딱 넣고 멈췄다가 다음 픽셀에 넣고 멈췄다가 이런 느낌인가봐.)
     }
 
@@ -87,7 +88,7 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 // -------------------------------- 서보모터 초기 설정 시작 --------------------------------
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
 #define RC_SERVO_PIN 8 //8번핀 할당
-#define NEURAL_ANGLE 115 //기본 앵글: 115도 -> 전방 방향
+#define NEURAL_ANGLE 90 //기본 앵글: 115도 -> 전방 방향
 #define LEFT_STEER_ANGLE -40 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
 Servo Steeringservo; //서보를 사용하는 함수를 미리 선언
@@ -95,8 +96,12 @@ int Steering_Angle = NEURAL_ANGLE;//기본 스티어링 값 기본값으로 지�
 
 void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 {
-    if(steer_angle>=RIGHT_STEER_ANGLE) steer_angle = RIGHT_STEER_ANGLE; //스티어링 앵글 값이 오른쪽 스티어링 값 이상일 경우, 앵글에 오른쪽 스티어링 값 넣음 
-    if(steer_angle<=LEFT_STEER_ANGLE)  steer_angle = LEFT_STEER_ANGLE; //이 코드도 위랑 비슷하게 작동
+    if(steer_angle>=RIGHT_STEER_ANGLE)
+        steer_angle = RIGHT_STEER_ANGLE; 
+        //스티어링 앵글 값이 오른쪽 스티어링 값 이상일 경우, 앵글에 오른쪽 스티어링 값 넣음 
+    if(steer_angle<=LEFT_STEER_ANGLE)
+        steer_angle = LEFT_STEER_ANGLE;
+        //이 코드도 위랑 비슷하게 작동
     Steeringservo.write(NEURAL_ANGLE + steer_angle);  // 기본값(90도)에 앵글 값 대입하여 스티어링 작동 
 }   
 // -------------------------------- 서보모터 초기 설정 끝 --------------------------------
@@ -133,19 +138,52 @@ void steering_by_camera(void)
         sum += LineSensor_Data_Adaption[i];
         x_sum += LineSensor_Data_Adaption[i] * i;
     }
-    Serial.println("----------------------");
-    Serial.print("sum은 ");
-    Serial.println(sum);
-    Serial.print("x_sum은 ");
-    Serial.println(x_sum);
+    // Serial.println("----------------------");
+    // Serial.print("sum은 ");
+    // Serial.println(sum);
+    // Serial.print("x_sum은 ");
+    // Serial.println(x_sum);
     steer_data = (x_sum/sum) - NPIXELS/2 + camera_pixel_offset;
 
-    steering_control(steer_data*2.1); // 곱하는 값은 가중치.
+    steering_control(steer_data*8); // 곱하는 값은 가중치.
 
-    Serial.print("steer_data는 ");
+    // Serial.print("steer_data는 ");
     Serial.println(steer_data);
 }
 // -------------------------------- (무게중심) 시스템 끝 --------------------------------
+
+
+
+// -------------------------------- 초음파 시스템 시작 --------------------------------
+#define DEBUG 1 // 디버깅 코드는 왜있을까~~~~
+#include <NewPing.h> //초음파 관련 헤더파일임! (설치 필요)
+#define SONAR_NUM 1 //초음파 센서 번호를 부여 (1번)
+#define MAX_DISTANCE 150 //cm단위 최대 값 (초음파 최대값)
+float UltrasonicSensorData[SONAR_NUM];//센서 데이터 1차배열 생성(실수)
+
+NewPing sonar[SONAR_NUM] = {   // 초음파센서 배열 생성 
+  NewPing(9, 10, MAX_DISTANCE)  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정)
+};
+
+
+void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수 
+{
+   UltrasonicSensorData[0]= sonar[0].ping_cm(); //해당 배열에 첫번째 초음파 센서를 이용한 cm단위의 값을 넣음
+
+   if(UltrasonicSensorData[0] == 0.0) //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
+    {
+        UltrasonicSensorData[0] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
+    }
+}
+
+void serial_com(void)
+{
+    if(DEBUG != 1) return;
+
+    Serial.print("Sonar : ");
+    Serial.println(UltrasonicSensorData[0]);
+}
+// -------------------------------- 초음파 시스템 끝 --------------------------------
 
 
 
@@ -197,6 +235,8 @@ void setup() {
 
 // -------------------------------- 루프 START --------------------------------
 void loop() { 
+    read_ultrasonic_sensor(); //초음파 센서 값 리딩 
+    serial_com(); //초음파 값 시리얼에 계속 띄움.
     int i;
     read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
     motor_control(0, 50); //1의 방향으로 50의 속도만큼

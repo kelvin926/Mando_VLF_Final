@@ -29,9 +29,11 @@ void line_adaptation(void) // 라인 보정부
     int i;
     for (i = 0; i < NPIXELS; i++)
     {
-        if (LineSensor_Data[i] >= MAX_LineSensor_Data[i])  MAX_LineSensor_Data[i] = LineSensor_Data[i]; 
+        if (LineSensor_Data[i] >= MAX_LineSensor_Data[i])  
+            MAX_LineSensor_Data[i] = LineSensor_Data[i]; 
         //센서 데이터가 이전의 최대 데이터보다 클 경우, 최대 데이터를 센서 데이터로 입력
-        if (LineSensor_Data[i] <= MIN_LineSensor_Data[i])  MIN_LineSensor_Data[i] = LineSensor_Data[i]; 
+        if (LineSensor_Data[i] <= MIN_LineSensor_Data[i])
+            MIN_LineSensor_Data[i] = LineSensor_Data[i]; 
         //센서 데이터가 이전의 최소 데이터보다 작을 경우, 최소 데이터를 센서 데이터로 입력
     }
 }
@@ -54,10 +56,11 @@ void read_line_sensor(void) //라인 센싱부
         delayMicroseconds (1); // 1ms대기
         digitalWrite (CLKpin, HIGH); //CLK핀 작동상태 - 데이터 동기화 시작 (이게, 데이터가 많으니까 한 픽셀에 들어갈 양만 clk값에 따라 딱 넣고 멈췄다가 다음 픽셀에 넣고 멈췄다가 이런 느낌인가봐.)
     }
-
+    
     for (i = 0; i < NPIXELS; i++)
     {
-        LineSensor_Data_Adaption[i] = map(Pixel[i], MIN_LineSensor_Data[i], MAX_LineSensor_Data[i], 0, 256); //map(변환할 수, 현재 범위의 최소값, 현재 범위의 최대값, 목표 범위의 최소값, 목표 범위의 최대값)
+        LineSensor_Data_Adaption[i] = map(Pixel[i], MIN_LineSensor_Data[i], MAX_LineSensor_Data[i], 0, 256);
+        //map(변환할 수, 현재 범위의 최소값, 현재 범위의 최대값, 목표 범위의 최소값, 목표 범위의 최대값)
         /* 보정데이터에 각 픽셀마다의 값을 가져와서 0~255값을 넣어서 최종적으로 0~255의 값을 갖게 함.
         한마디로, 카메라로 이미지를 찍었으면, 가장 흰색에 가까운 값을 최대로 두고, 가장 검은색에 가까운 값을 최소로 둠.
         이후 최대값을 255로 기준을 삼고, 최소값을 0으로 두어서, 상황에 따라 능동적으로 색을 분리할 수 있게함.
@@ -73,7 +76,7 @@ void read_line_sensor(void) //라인 센싱부
 #define MOTOR_DIR 4 //노란친구(Encoder A) - D2(INT4) (방향 제어 - direction)
 #define MOTOR_PWM 5 //흰색친구(Encoder B) - D3(INT5) (속도 제어 - speed (pwm))
 
-int Motor_Speed =0; //모터 속도 : 0 (기본값)
+int Motor_Speed = 0; //모터 속도 : 0 (기본값)
 #define NORMAL_SPEED 100 //일반 모터 속도 : 100
 #define SLOW_SPEED   70 //느린 모터 속도 : 70
 
@@ -89,7 +92,7 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 // -------------------------------- 서보모터 초기 설정 시작 --------------------------------
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
 #define RC_SERVO_PIN 8 //8번핀 할당
-#define NEURAL_ANGLE 115 //기본 앵글: 115도 -> 전방 방향
+#define NEURAL_ANGLE 90 //기본 앵글: 115도 -> 전방 방향
 #define LEFT_STEER_ANGLE -40 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
 Servo Steeringservo; //서보를 사용하는 함수를 미리 선언
@@ -97,8 +100,12 @@ int Steering_Angle = NEURAL_ANGLE;//기본 스티어링 값 기본값으로 지�
 
 void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 {
-    if(steer_angle>=RIGHT_STEER_ANGLE) steer_angle = RIGHT_STEER_ANGLE; //스티어링 앵글 값이 오른쪽 스티어링 값 이상일 경우, 앵글에 오른쪽 스티어링 값 넣음 
-    if(steer_angle<=LEFT_STEER_ANGLE)  steer_angle = LEFT_STEER_ANGLE; //이 코드도 위랑 비슷하게 작동
+//    if(steer_angle>=RIGHT_STEER_ANGLE)
+//        steer_angle = RIGHT_STEER_ANGLE; 
+//        //스티어링 앵글 값이 오른쪽 스티어링 값 이상일 경우, 앵글에 오른쪽 스티어링 값 넣음 
+//    if(steer_angle<=LEFT_STEER_ANGLE)
+//        steer_angle = LEFT_STEER_ANGLE; 
+//        //이 코드도 위랑 비슷하게 작동
     Steeringservo.write(NEURAL_ANGLE + steer_angle);  // 기본값(90도)에 앵글 값 대입하여 스티어링 작동 
 }   
 // -------------------------------- 서보모터 초기 설정 끝 --------------------------------
@@ -135,17 +142,22 @@ void steering_by_camera(void)
         sum += LineSensor_Data_Adaption[i];
         x_sum += LineSensor_Data_Adaption[i] * i;
     }
+    /*
+    // Debug Code
     Serial.println("----------------------");
     Serial.print("sum은 ");
     Serial.println(sum);
     Serial.print("x_sum은 ");
     Serial.println(x_sum);
     steer_data = (x_sum/sum) - NPIXELS/2 + camera_pixel_offset;
-
-    steering_control(steer_data*2); // 곱하는 값은 가중치.
-
     Serial.print("steer_data는 ");
     Serial.println(steer_data);
+    */
+    steer_data = (x_sum/sum) - NPIXELS/2 + camera_pixel_offset;
+    steering_control(steer_data*8); // 곱하는 값은 가중치.
+    Serial.println(steer_data);
+
+    
 }
 // -------------------------------- 센터링(무게중심) 시스템 끝 --------------------------------
 
@@ -231,19 +243,17 @@ void setup() {
 
 // -------------------------------- 루프 START --------------------------------
 void loop() {
-    read_ultrasonic_sensor(); //초음파 센서 값 리딩 
-    serial_com(); //초음파 값 시리얼에 계속 띄움.
+//    read_ultrasonic_sensor(); //초음파 센서 값 리딩 
+//    serial_com(); //초음파 값 시리얼에 계속 띄움.
 
     int i;
     read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
-    motor_control(0, 50); //1의 방향으로 50의 속도만큼
+    motor_control(0, 30); //1의 방향으로 50의 속도만큼
 
     threshold(); // 이진화 함수
     steering_by_camera(); //센터링(무게중심) 함수
     for (i = 0; i < NPIXELS; i++) //i에 픽셀 배열 순서 값이 촥촥 들어가겠죵..?
     {
-
-
         // 이진수 데이터가 아닌 RAW데이터를 확인 할 때에는 이 코드들을 살리기! + 이진화 함수 내용 끄기
         /*
         if (digitalRead(CLKpin) == LOW) // 카메라 데이터 송수신 동기화 X (이미 끝난 상태)
@@ -254,9 +264,8 @@ void loop() {
                 // CLK값이 LOW라는 것은 해당 픽셀 값에 넣고, 1ms간 대기 중이라는 것이기에, 그냥 보정값을 출력하는 것. 이해가 될지 모르겠돠,,
         */
         // 프로세싱으로 라인 검출 데이터를 확인해야한다면 해당 코드를 살리기!
-        /* Serial.print(LineSensor_Data_Adaption[i]);
-        Serial.print(" ");
-        */
+//        Serial.print(LineSensor_Data_Adaption[i]);
+//        Serial.print(" ");
     }
     // Serial.println("  ");
     delay(100);

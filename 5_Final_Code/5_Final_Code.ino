@@ -140,7 +140,7 @@ void steering_by_camera(void)
     Serial.println(x_sum);
     steer_data = (x_sum/sum) - NPIXELS/2 + camera_pixel_offset;
 
-    steering_control(steer_data*2); // 곱하는 값은 가중치.
+    steering_control(steer_data*2.1); // 곱하는 값은 가중치.
 
     Serial.print("steer_data는 ");
     Serial.println(steer_data);

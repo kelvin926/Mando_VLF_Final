@@ -29,8 +29,10 @@ void line_adaptation(void) // 라인 보정부
     int i;
     for (i = 0; i < NPIXELS; i++)
     {
-        if (LineSensor_Data[i] >= MAX_LineSensor_Data[i])  MAX_LineSensor_Data[i] = LineSensor_Data[i]; //센서 데이터가 이전의 최대 데이터보다 클 경우, 최대 데이터를 센서 데이터로 입력
-        if (LineSensor_Data[i] <= MIN_LineSensor_Data[i])  MIN_LineSensor_Data[i] = LineSensor_Data[i]; //센서 데이터가 이전의 최소 데이터보다 작을 경우, 최소 데이터를 센서 데이터로 입력
+        if (LineSensor_Data[i] >= MAX_LineSensor_Data[i])  MAX_LineSensor_Data[i] = LineSensor_Data[i]; 
+        //센서 데이터가 이전의 최대 데이터보다 클 경우, 최대 데이터를 센서 데이터로 입력
+        if (LineSensor_Data[i] <= MIN_LineSensor_Data[i])  MIN_LineSensor_Data[i] = LineSensor_Data[i]; 
+        //센서 데이터가 이전의 최소 데이터보다 작을 경우, 최소 데이터를 센서 데이터로 입력
     }
 }
 
@@ -57,9 +59,9 @@ void read_line_sensor(void) //라인 센싱부
     {
         LineSensor_Data_Adaption[i] = map(Pixel[i], MIN_LineSensor_Data[i], MAX_LineSensor_Data[i], 0, 256); //map(변환할 수, 현재 범위의 최소값, 현재 범위의 최대값, 목표 범위의 최소값, 목표 범위의 최대값)
         /* 보정데이터에 각 픽셀마다의 값을 가져와서 0~255값을 넣어서 최종적으로 0~255의 값을 갖게 함.
-        // 한마디로, 카메라로 이미지를 찍었으면, 가장 흰색에 가까운 값을 최대로 두고, 가장 검은색에 가까운 값을 최소로 둠.
-        // 이후 최대값을 255로 기준을 삼고, 최소값을 0으로 두어서, 상황에 따라 능동적으로 색을 분리할 수 있게함.
-        // 검은색에 최대한 가까운 값을 0으로 보정, 흰색에 가장 가까운 값을 255로 고정해서 범위를 능동적으로 조절한다.
+        한마디로, 카메라로 이미지를 찍었으면, 가장 흰색에 가까운 값을 최대로 두고, 가장 검은색에 가까운 값을 최소로 둠.
+        이후 최대값을 255로 기준을 삼고, 최소값을 0으로 두어서, 상황에 따라 능동적으로 색을 분리할 수 있게함.
+        검은색에 최대한 가까운 값을 0으로 보정, 흰색에 가장 가까운 값을 255로 고정해서 범위를 능동적으로 조절한다.
         대충 느낌 알꺼라 믿으 */
     }
 }
@@ -145,12 +147,12 @@ void steering_by_camera(void)
     Serial.print("steer_data는 ");
     Serial.println(steer_data);
 }
-// -------------------------------- (무게중심) 시스템 끝 --------------------------------
+// -------------------------------- 센터링(무게중심) 시스템 끝 --------------------------------
 
 
 
-///////////////// 초음파  //////////////
-#define DEBUG 1
+// -------------------------------- 초음파 시스템 시작 --------------------------------
+#define DEBUG 1 // 디버깅 코드는 왜있을까~~~~
 #include <NewPing.h> //초음파 관련 헤더파일임! (설치 필요)
 #define SONAR_NUM 1 //초음파 센서 번호를 부여 (1번)
 #define MAX_DISTANCE 150 //cm단위 최대 값 (초음파 최대값)
@@ -177,7 +179,7 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
         UltrasonicSensorData[0] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
     }
 }
-///////////////// 초음파 끝 ///////////////
+// -------------------------------- 초음파 시스템 끝 --------------------------------
 
 
 
@@ -241,6 +243,7 @@ void loop() {
     for (i = 0; i < NPIXELS; i++) //i에 픽셀 배열 순서 값이 촥촥 들어가겠죵..?
     {
 
+
         // 이진수 데이터가 아닌 RAW데이터를 확인 할 때에는 이 코드들을 살리기! + 이진화 함수 내용 끄기
         /*
         if (digitalRead(CLKpin) == LOW) // 카메라 데이터 송수신 동기화 X (이미 끝난 상태)
@@ -250,12 +253,11 @@ void loop() {
                 //다음 픽셀 값을 출력함. 위에 픽셀값 넣는 반목문을 보면, CLK핀이 High일 경우 바로 다음에 i값이 올라가서 다음 픽셀 값을 가지게 됨. 따라서 1을 더해 다음 픽셀 값을 출력하는 것.
                 // CLK값이 LOW라는 것은 해당 픽셀 값에 넣고, 1ms간 대기 중이라는 것이기에, 그냥 보정값을 출력하는 것. 이해가 될지 모르겠돠,,
         */
-
         // 프로세싱으로 라인 검출 데이터를 확인해야한다면 해당 코드를 살리기!
-        // Serial.print(LineSensor_Data_Adaption[i]);
-        // Serial.print(" ");
+        /* Serial.print(LineSensor_Data_Adaption[i]);
+        Serial.print(" ");
+        */
     }
-
     // Serial.println("  ");
     delay(100);
 }

@@ -86,8 +86,8 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
 #define RC_SERVO_PIN 8 //8번핀 할당
 #define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
-#define LEFT_STEER_ANGLE -40 //좌측 스티어링 각도 지정
-#define RIGHT_STEER_ANGLE 40 //우측 스티어링 각도 지정
+#define LEFT_STEER_ANGLE -30 //좌측 스티어링 각도 지정
+#define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
 Servo SteeringServo; //서보를 사용하는 함수를 미리 선언
 int Steering_Angle = NEURAL_ANGLE;//기본 스티어링 값 기본값으로 지정(전방)
 
@@ -155,7 +155,7 @@ void steering_by_camera(void)
     steer_data = ((x_sum/sum) - (NPIXELS/2)) + camera_pixel_offset;
     // 싱글라인 기준. 듀얼라인의 경우 위에 sum부분에서 절반을 나누어서 각 스티어링을 구해야 할듯.
 
-    steering_control(steer_data*1); // 곱하는 값은 가중치(소수점 권장함!)
+    steering_control(steer_data*0.5); // 곱하는 값은 가중치(소수점 권장함!)
 
     // Serial.print("steer_data는 ");
     Serial.println(steer_data);
@@ -196,14 +196,14 @@ void setup() {
     pinMode(AOpin, INPUT); //카메라 A0 아날로그 핀 입력모드
     digitalWrite(SIpin, LOW);   // IDLE(대기) 상태 - 카메라 데이터 송수신X
     digitalWrite(CLKpin, LOW);  // IDLE(대기) 상태 - 카메라 데이터 송수신이 없기에, 주기도 없음.
-#if FASTADC //아날로그 고속화 리딩이 1(True) 일 때
-            // 16Mhz속도로 고속화시킴. [아날로그 데이터를 디지털화 한다고 하더라구요..?!]
-            // 16MHz이라면 ADC를 위한 주파수는 16M/64 = 250kHz가 된다.
-            // https://studymake.tistory.com/381 - 관련 레퍼런스
-    sbi(ADCSRA, ADPS2); //위에 어샘블리 쪽이랑 관련된 것 같은데, 입력되는 데이터를 고속화하는 느낌..? 한번에 많이 가져오는건가..
-    cbi(ADCSRA, ADPS1);
-    cbi(ADCSRA, ADPS0); // 고속화 주파수에 맞게 아날로그 데이터를 디지털 주파수화 하는 느낌......
-#endif
+    #if FASTADC //아날로그 고속화 리딩이 1(True) 일 때
+                // 16Mhz속도로 고속화시킴. [아날로그 데이터를 디지털화 한다고 하더라구요..?!]
+                // 16MHz이라면 ADC를 위한 주파수는 16M/64 = 250kHz가 된다.
+                // https://studymake.tistory.com/381 - 관련 레퍼런스
+        sbi(ADCSRA, ADPS2); //위에 어샘블리 쪽이랑 관련된 것 같은데, 입력되는 데이터를 고속화하는 느낌..? 한번에 많이 가져오는건가..
+        cbi(ADCSRA, ADPS1);
+        cbi(ADCSRA, ADPS0); // 고속화 주파수에 맞게 아날로그 데이터를 디지털 주파수화 하는 느낌......
+    #endif
     int i;
     for (i = 0; i < NPIXELS; i++) // NPIXELS = 128임.
     {
@@ -239,6 +239,5 @@ void loop() {
     read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
     threshold(); // 이진화 함수
     steering_by_camera(); //센터링(무게중심) 함수
-    delay(100);
 }
 // -------------------------------- 루프 END --------------------------------

@@ -62,7 +62,7 @@ Servo Steeringservo; // 서보 모터 이름 지정~~
 
 void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 {
-    Steeringservo.write(NEURAL_ANGLE + steer_angle);  // 기본값(90도)에 앵글 값 대입하여 스티어링 작동 
+    Steeringservo.write(NEURAL_ANGLE + steer_angle);  // 기본값(90도)에 앵글 값 대입하여 스티어링 작동
 }   
 // -------------------------------- 서보모터 초기 설정 끝 --------------------------------
 
@@ -115,10 +115,14 @@ void Two_Line(void)
         Line_Exist = 0;
     }
     else{ // 라인이 존재한다면
+        Serial.print("왼쪽 값은 ");
+        Serial.println(left);
+        Serial.print("오른쪽 값은 ");
+        Serial.println(right);
         Line_Exist = 1;
         center = ((left + right)/2);
         two_steer_data = center - 64; // 양수면 오른쪽으로, 음수면 왼쪽으로 움직임.
-        // Serial.println(two_steer_data); // DEBUG
+        Serial.println(two_steer_data); // DEBUG
         steering_control(two_steer_data * additional_steer_num); // 가중치 : additional_steer_num -> 조향값을 더 줘야함.
     }
 }
@@ -132,17 +136,17 @@ void Two_Line(void)
 #define MAX_DISTANCE 150 //cm단위 최대 값 (초음파 최대값)
 float UltrasonicSensorData[SONAR_NUM];//센서 데이터 1차배열 생성(실수)
 
-NewPing sonar[SONAR_NUM] = {   // 초음파센서 배열 생성 
-    NewPing(9, 10, MAX_DISTANCE),
-    NewPing(2, 3, MAX_DISTANCE) // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정)
-};
+    NewPing sonar_1(9, 10, MAX_DISTANCE);
+    NewPing sonar_2(2, 3, MAX_DISTANCE); // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정)
+
 void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수 
 {
+    UltrasonicSensorData[0]= sonar_1.ping_cm();
+    UltrasonicSensorData[1]= sonar_2.ping_cm();
     for(int i=0; i<=1; i++){
-        UltrasonicSensorData[i]= sonar[i].ping_cm();
         if(UltrasonicSensorData[i] == 0.0) {    //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
             UltrasonicSensorData[i] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
-            // Serial.println(UltrasonicSensorData[i]); //DEBUG
+             Serial.println(UltrasonicSensorData[i]); //DEBUG
         }
     }
 }
@@ -162,7 +166,7 @@ void No_Line_Turn(void){
     delay(300); // 0.3초 휴식
     steering_control(30); // 위 while문이 끝나면 우측으로 30도 바퀴 회전
     delay(300); // 0.3초 휴식
-    while (right_sensor <= 20) // 옆 센서가 20cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
+    while (right_sensor <= 10) // 옆 센서가 20cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
         motor_control(1,50);
         read_ultrasonic_sensor();
         right_sensor = UltrasonicSensorData[1];
@@ -178,8 +182,8 @@ void No_Line_Sonar(void) {
     while(right_sonar_data != MAX_DISTANCE){ // 오른쪽 초음파 센서 값이 무한대 (150)을 보일 때 까지 진행
         read_ultrasonic_sensor();
         right_sonar_data = UltrasonicSensorData[1];
-        if (right_sonar_data > want_distance) { //왼쪽으로 많이 가있음.
-            steering_control(20); //오른쪽으로 턴해서 멀어짐
+        if (right_sonar_data < 150 && right_sonar_data > want_distance) { //왼쪽으로 많이 가있음.
+            steering_control(20); //오른쪽으로 턴해서 가까워짐
             motor_control(1,50);
             delay(50);
         }
@@ -243,7 +247,17 @@ void setup() {
     pinMode(MOTOR_PWM, OUTPUT); //DC모터 속도 핀을 디지털 출력 핀으로 지정
 // -------------------------------- DC모터 셋업 부분 끝 --------------------------------
     Serial.begin(115200); // 115200속도로 시리얼 전송~
+
+// 대회에서 앞에 장애물이 사라질 때 출발하는 시스템 시작 --------------------------------
+int start = 0;
+while (1) {
+    read_ultrasonic_sensor();
+    if (UltrasonicSensorData[0] == 150) { // 앞에 장애물이 있음
+        break; // 시작!
+    }
 }
+// 대회에서 앞에 장애물이 사라질 때 출발하는 시스템 끝 --------------------------------
+} 
 // -------------------------------- 셋업 END --------------------------------
 
 

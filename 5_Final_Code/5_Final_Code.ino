@@ -126,6 +126,10 @@ void Two_Line(void)
             right = i;
         }
     }
+    Serial.print("왼쪽 값은 ");
+    Serial.println(left);
+    Serial.print("오른쪽 값은 ");
+    Serial.println(right);
     center = ((left + right)/2);
     two_steer_data = center - 64;
     Serial.println(two_steer_data);

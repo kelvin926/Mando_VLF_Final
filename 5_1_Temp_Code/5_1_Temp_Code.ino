@@ -1,35 +1,21 @@
 // ---------------카메라 초기 설정 시작---------------
 #define AOpin  A0 // Analog output - 카메라 데이터 통신
-#define SIpin  11 // Start Integration 디지털 11핀 - 데이터 전송을 알리는 핀
+#define SIpin  11 // Start Integration 디지털 11핀 - 카메라 데이터 전송을 알리는 핀
 #define CLKpin 12  // Clock 디지털 12핀 - 데이터 전송을 위한 속도(클럭) 펄스를 주는 핀
-#define NPIXELS 128 // 한 배열당 몇 픽셀을 넣을 것인지 정의 
+#define NPIXELS 128 // 해상도
 byte Pixel[NPIXELS]; // 얼마나 측정할 것인지. <0-255> (블랙 0, 흰색 255)
-// int LineSensor_Data[NPIXELS]; // 원본 라인센서 데이터 배열
 int LineSensor_Data_Adaption[NPIXELS]; // 보정된 라인센서 데이터 배열
 int MAX_LineSensor_Data[NPIXELS]; // 센서의 최대값 정의
 int MIN_LineSensor_Data[NPIXELS]; // 센서의 최소값 정의
-int flag_line_adapation; // 라인센서 확인을 위한 플래그 변수
-#define FASTADC 1
+#define FASTADC 1 // 데이터 가속화
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+void read_ultrasonic_sensor(void);
+int flag_line_adapation = 1; // 라인 트레이싱 실행 여부
 // ------------------ 카메라 초기 설정 끝 --------------------------------
 
 
 // ------------------ 라인 센싱 초기 설정 시작 --------------------------------
-void line_adaptation(void) // 라인 보정부
-{
-    int i;
-    for (i = 0; i < NPIXELS; i++)
-    {
-        if (LineSensor_Data_Adaption[i] >= MAX_LineSensor_Data[i])  
-            MAX_LineSensor_Data[i] = LineSensor_Data_Adaption[i]; 
-        //센서 데이터가 이전의 최대 데이터보다 클 경우, 최대 데이터를 센서 데이터로 입력
-        if (LineSensor_Data_Adaption[i] <= MIN_LineSensor_Data[i])
-            MIN_LineSensor_Data[i] = LineSensor_Data_Adaption[i]; 
-        //센서 데이터가 이전의 최소 데이터보다 작을 경우, 최소 데이터를 센서 데이터로 입력
-    }
-}
-
 void read_line_sensor(void) //라인 센싱부
 {
     int i;
@@ -62,13 +48,9 @@ void read_line_sensor(void) //라인 센싱부
 #define MOTOR_DIR 4 //노란친구(Encoder A) - D2(INT4) (방향 제어 - direction)
 #define MOTOR_PWM 5 //흰색친구(Encoder B) - D3(INT5) (속도 제어 - speed (pwm))
 
-int Motor_Speed = 0; //모터 속도 : 0 (기본값)
-#define NORMAL_SPEED 100 //일반 모터 속도 : 100
-#define SLOW_SPEED   70 //느린 모터 속도 : 70
-
 void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성 
 {
-    digitalWrite(MOTOR_DIR, 1-direction);   //방향 값을 디지털 값으로 모터에 입력
+    digitalWrite(MOTOR_DIR, direction);   //방향 값을 디지털 값으로 모터에 입력
     analogWrite(MOTOR_PWM, speed); //속도 값을 아날로그 값으로 모터의 입력
 }
 // ------------------ DC모터 초기 설정 끝 --------------------------------
@@ -78,7 +60,7 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 // -------------------------------- 서보모터 초기 설정 시작 --------------------------------
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
 #define RC_SERVO_PIN 8 //8번핀 할당
-#define NEURAL_ANGLE 90 //기본 앵글: 115도 -> 전방 방향
+#define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
 #define LEFT_STEER_ANGLE -30 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
 Servo Steeringservo; //서보를 사용하는 함수를 미리 선언
@@ -107,41 +89,24 @@ void threshold(void)
 // -------------------------------- 이진화 시스템 끝 --------------------------------
 
 
-
-// -------------------------------- 센터링(무게중심) 시스템 시작 --------------------------------
-/*
-#define camera_pixel_offset 0 //센터가 0이 출력되도록 보정해주는 값 (수정 필요)
-void steering_by_camera(void)
-{
-    int i;
-    long sum = 0;
-    long x_sum = 0;
-    int steer_data = 0;
-    for (i = 0; i < NPIXELS; i++)
-    {
-        sum += LineSensor_Data_Adaption[i];
-        x_sum += LineSensor_Data_Adaption[i] * i;
-    }
-    steer_data = (x_sum/sum) - NPIXELS/2 + camera_pixel_offset;
-    steering_control(steer_data*1); // 곱하는 값은 가중치.
-    Serial.println(steer_data);
-}
-*/
-// -------------------------------- 센터링(무게중심) 시스템 끝 --------------------------------
-
-
 // 루프에 while문을 돌려서 안전수(두 라인 검출 시스템 on/off)를 확보하고, 라인 검출에 실패했을 때 미로 탐색 함수 작동, 한 라인 검출 실패 -> 한줄모드
 
 // ------------------ 적응형 라인 검출 시스템 시작 --------------------------------
 void Two_Line(void)
 {
     int i;
-    int left, right; //좌,우 라인 내부 값
+    int k;
+    int sum = 0;
+    int left = 0, right = 0; //좌,우 라인 내부 값
     int center;
     int two_steer_data = 0;
     for (i = 0; i < NPIXELS; i++) { // 왼쪽부터 순차적으로 올라갈 때 처음으로 라인이 존재하는 구간 검출
         if (LineSensor_Data_Adaption[i] == 255) {
             left = i;
+        }
+        sum += LineSensor_Data_Adaption[i];
+        if (sum == 0 && i == 127) {
+            flag_line_adapation = 0;
         }
     }
     for (i = (NPIXELS-1); i >= 0; i--) { // 오른쪽부터 순차적으로 내려올 때 처음으로 라인이 존재하는 구간 검출
@@ -161,20 +126,25 @@ void Two_Line(void)
 // -------------------------------- 초음파 시스템 시작 --------------------------------
 #define DEBUG 1 // 디버깅 코드는 왜있을까~~~~
 #include <NewPing.h> //초음파 관련 헤더파일임! (설치 필요)
-#define SONAR_NUM 1 //초음파 센서 번호를 부여 (1번)
+#define SONAR_NUM 2 //초음파 센서 수
 #define MAX_DISTANCE 150 //cm단위 최대 값 (초음파 최대값)
 float UltrasonicSensorData[SONAR_NUM];//센서 데이터 1차배열 생성(실수)
 
 NewPing sonar[SONAR_NUM] = {   // 초음파센서 배열 생성 
-  NewPing(9, 10, MAX_DISTANCE)  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정)
+    NewPing(9, 10, MAX_DISTANCE),
+    NewPing(2, 3, MAX_DISTANCE) // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정)
 };
 void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수 
 {
-   UltrasonicSensorData[0]= sonar[0].ping_cm(); //해당 배열에 첫번째 초음파 센서를 이용한 cm단위의 값을 넣음
-
-   if(UltrasonicSensorData[0] == 0.0) //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
-    {
-        UltrasonicSensorData[0] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
+    for(int i=0; i<=1; i++){
+        UltrasonicSensorData[i]= sonar[i].ping_cm();
+        if(UltrasonicSensorData[i] == 0.0) {    //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
+        UltrasonicSensorData[i] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
+        Serial.println(UltrasonicSensorData[i]);
+        }
+    }
+    while(1) {
+        motor_control(0, 70);
     }
 }
 // -------------------------------- 초음파 시스템 끝 --------------------------------
@@ -196,12 +166,11 @@ void setup() {
     pinMode (AOpin, INPUT); //카메라 A0 아날로그 핀 입력모드
     digitalWrite(SIpin, LOW);   // IDLE(대기) 상태 - 카메라 데이터 송수신X
     digitalWrite(CLKpin, LOW);  // IDLE(대기) 상태 - 카메라 데이터 송수신이 없기에, 주기도 없음.
-#if FASTADC
-    sbi(ADCSRA, ADPS2); //위에 어샘블리 쪽이랑 관련된 것 같은데, 입력되는 데이터를 고속화하는 느낌..? 한번에 많이 가져오는건가..
-    cbi(ADCSRA, ADPS1);
-    cbi(ADCSRA, ADPS0); // 고속화 주파수에 맞게 아날로그 데이터를 디지털 주파수화 하는 느낌......
-#endif
-    flag_line_adapation = 0; // 얜 도대체 어디에 쓰는걸까..?
+    #if FASTADC
+        sbi(ADCSRA, ADPS2); //위에 어샘블리 쪽이랑 관련된 것 같은데, 입력되는 데이터를 고속화하는 느낌..? 한번에 많이 가져오는건가..
+        cbi(ADCSRA, ADPS1);
+        cbi(ADCSRA, ADPS0); // 고속화 주파수에 맞게 아날로그 데이터를 디지털 주파수화 하는 느낌......
+    #endif
 // -------------------------------- 카메라/라인센싱 셋업 부분 끝 --------------------------------
 // -------------------------------- 서보모터 셋업 부분 시작 --------------------------------
     Steeringservo.attach(RC_SERVO_PIN); //사용할 핀 먼저 선언
@@ -219,11 +188,16 @@ void setup() {
 // -------------------------------- 루프 START --------------------------------
 void loop() {
 
-    int i;
+    // int i;
+    motor_control(1, 70); //앞 방향으로 y의 속도만큼
     read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
-    motor_control(0, 70); //1의 방향으로 50의 속도만큼
     threshold(); // 이진화 함수
-    // steering_by_camera(); //센터링(무게중심) 함수
     Two_Line();
+    if (flag_line_adapation != 1){
+        read_ultrasonic_sensor();
+        for(int i=0; i<=1; i++){
+            Serial.println(UltrasonicSensorData[i]);
+        }
+    }
 }
 // -------------------------------- 루프 END --------------------------------

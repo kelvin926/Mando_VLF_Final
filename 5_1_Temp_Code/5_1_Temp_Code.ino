@@ -11,14 +11,13 @@ int MIN_LineSensor_Data[NPIXELS]; // 센서의 최소값 정의
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 void read_ultrasonic_sensor(void);
-int flag_line_adapation = 1; // 라인 트레이싱 실행 여부
+int Line_Exist = 1; // 라인 존재 여부 (기본값 = 1)
 // ------------------ 카메라 초기 설정 끝 --------------------------------
 
 
 // ------------------ 라인 센싱 초기 설정 시작 --------------------------------
 void read_line_sensor(void) //라인 센싱부
 {
-    int i;
     delayMicroseconds (1);  // 1ms만큼 일시중지
     delay(10);              // 10ms만큼 일시중지 -> 근데 왜 이렇게 만든거지...? 일단 건들지 않겠으.
     digitalWrite (CLKpin, LOW); // CLK핀 대기상태 - 송수신 주기 X
@@ -27,17 +26,13 @@ void read_line_sensor(void) //라인 센싱부
     digitalWrite (SIpin, LOW); //SI핀 대기상태 - 카메라 송수신 중단.
     delayMicroseconds (1); //1ms 대기
 
+    int i;
     for (i = 0; i < NPIXELS; i++)
     {
         Pixel[i] = analogRead (AOpin) / 4 ; // 8-bit is enough - 픽셀배열에 각 이미지 픽셀 값을 넣음
         digitalWrite (CLKpin, LOW); // CLK핀 대기상태 - 데이터 동기화 중지 (위 코드에서 High인 상태에서 해당 반복문이 시작되기에, 첫 픽셀은 기본으로 들어감.)
         delayMicroseconds (1); // 1ms대기
         digitalWrite (CLKpin, HIGH); //CLK핀 작동상태 - 데이터 동기화 시작 (이게, 데이터가 많으니까 한 픽셀에 들어갈 양만 clk값에 따라 딱 넣고 멈췄다가 다음 픽셀에 넣고 멈췄다가 이런 느낌인가봐.)
-    }
-    
-    for (i = 0; i < NPIXELS; i++)
-    {
-        LineSensor_Data_Adaption[i] = map(Pixel[i], MIN_LineSensor_Data[i], MAX_LineSensor_Data[i], 0, 256);
     }
 }
 // ------------------ 라인 센싱 초기 설정 끝 --------------------------------
@@ -63,7 +58,7 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 #define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
 #define LEFT_STEER_ANGLE -30 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
-Servo Steeringservo; //서보를 사용하는 함수를 미리 선언
+Servo Steeringservo; // 서보 모터 이름 지정~~
 
 void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 {
@@ -79,7 +74,7 @@ void threshold(void)
 {
     int i;
     for (i = 0; i < NPIXELS; i++)
-    { //세부 내용은 라인센싱부 주석을 참고하세유
+    {
         if((byte)Pixel[i] >= threshold_value)
             LineSensor_Data_Adaption[i] = 255;
         else
@@ -94,37 +89,44 @@ void threshold(void)
 // ------------------ 적응형 라인 검출 시스템 시작 --------------------------------
 void Two_Line(void)
 {
-    int i;
-    int k;
-    int sum = 0;
-    int left = 0, right = 0; //좌,우 라인 내부 값
-    int center;
-    int two_steer_data = 0;
-    for (i = 0; i < NPIXELS; i++) { // 왼쪽부터 순차적으로 올라갈 때 처음으로 라인이 존재하는 구간 검출
-        if (LineSensor_Data_Adaption[i] == 255) {
+    int i = 0, k = (NPIXELS-1), sum = 0, left = 0, right = 0; // left,right:좌,우 라인 내부 값
+    float center = 0;
+    int two_steer_data = 0; // 조향값.(가중치 안더함.)
+    int right_out_num, left_out_num;
+    float additional_steer_num = 1; // 조향 가중치 - 계속 변경 가능(1:기본값)
+
+    while(i < NPIXELS) {
+        if (LineSensor_Data_Adaption[i] == 255) { // 왼쪽부터 순차적으로 올라갈 때 처음으로 라인이 존재하는 구간 검출
             left = i;
+            break;
         }
-        sum += LineSensor_Data_Adaption[i];
-        if (sum == 0 && i == 127) {
-            flag_line_adapation = 0;
-        }
+        i++; // 만약 라인이 검출이 안된다면, i = 128이 됨. (이상값)
     }
-    for (i = (NPIXELS-1); i >= 0; i--) { // 오른쪽부터 순차적으로 내려올 때 처음으로 라인이 존재하는 구간 검출
-        if (LineSensor_Data_Adaption[i] == 255) {
-            right = i;
+
+    while(-1 < k) {
+        if (LineSensor_Data_Adaption[k] == 255) { // 오른쪽부터 순차적으로 내려갈 때 처음으로 라인이 존재하는 구간 검출
+            right = k;
+            break;
         }
+        k--; // 만약에 라인이 검출이 안된다면, k = -1이 됨. (이상값)
     }
-    center = ((left + right)/2);
-    two_steer_data = center - 64;
-    Serial.println(two_steer_data);
-    steering_control(two_steer_data*5);
+
+    if (i == 128 && k == -1) { // 검출 다 돌았는데, 라인이 없을 때.
+        Line_Exist = 0;
+    }
+    else{ // 라인이 존재한다면
+        Line_Exist = 1;
+        center = ((left + right)/2);
+        two_steer_data = center - 64; // 양수면 오른쪽으로, 음수면 왼쪽으로 움직임.
+        // Serial.println(two_steer_data); // DEBUG
+        steering_control(two_steer_data * additional_steer_num); // 가중치 : additional_steer_num -> 조향값을 더 줘야함.
+    }
 }
 // ------------------ 적응형 라인 검출 시스템 끝 ------------------------------
 
 
 
 // -------------------------------- 초음파 시스템 시작 --------------------------------
-#define DEBUG 1 // 디버깅 코드는 왜있을까~~~~
 #include <NewPing.h> //초음파 관련 헤더파일임! (설치 필요)
 #define SONAR_NUM 2 //초음파 센서 수
 #define MAX_DISTANCE 150 //cm단위 최대 값 (초음파 최대값)
@@ -139,27 +141,86 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
     for(int i=0; i<=1; i++){
         UltrasonicSensorData[i]= sonar[i].ping_cm();
         if(UltrasonicSensorData[i] == 0.0) {    //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
-        UltrasonicSensorData[i] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
-        Serial.println(UltrasonicSensorData[i]);
+            UltrasonicSensorData[i] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
+            // Serial.println(UltrasonicSensorData[i]); //DEBUG
         }
-    }
-    while(1) {
-        motor_control(0, 70);
     }
 }
 // -------------------------------- 초음파 시스템 끝 --------------------------------
 
 
 
+// ------------------ 라인 없을 때 시스템 시작 -----------------------------
+void No_Line_Turn(void){
+    int front_sensor = 200, right_sensor = 200;
+    while (front_sensor <= 100)  // 100cm 앞까지 벽이 오도록 전방으로 감. - 대회에서 연습 후 값 변경 필요
+        steering_control(0);
+        read_ultrasonic_sensor();
+        motor_control(1,50);
+        front_sensor = UltrasonicSensorData[0]; // 0 : 전방 센서 , 1 : 우측 센서
+    motor_control(1,0); // 일시정지
+    delay(300); // 0.3초 휴식
+    steering_control(30); // 위 while문이 끝나면 우측으로 30도 바퀴 회전
+    delay(300); // 0.3초 휴식
+    while (right_sensor <= 20) // 옆 센서가 20cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
+        motor_control(1,50);
+        read_ultrasonic_sensor();
+        right_sensor = UltrasonicSensorData[1];
+    motor_control(1,0);
+    delay(300); // 0.3초 휴식
+    steering_control(0);
+    delay(300); // 0.3초 휴식
+}
+
+void No_Line_Sonar(void) {
+    int right_sonar_data = 200; //우측 초음파 센서 값 (일부러 150 이상인 200값을 줌(이상값)) [오차 감안해도, 수월한 전진을 위해 int형을 줌.]
+    int want_distance = 20; // 미로 속에서 원하는 오른쪽부터의 유지 거리 값. (cm) -> 대회에서 연습 후 값 변경 필요
+    while(right_sonar_data != MAX_DISTANCE){ // 오른쪽 초음파 센서 값이 무한대 (150)을 보일 때 까지 진행
+        read_ultrasonic_sensor();
+        right_sonar_data = UltrasonicSensorData[1];
+        if (right_sonar_data > want_distance) { //왼쪽으로 많이 가있음.
+            steering_control(20); //오른쪽으로 턴해서 멀어짐
+            motor_control(1,50);
+            delay(50);
+        }
+        else if (right_sonar_data < want_distance) { //오른쪽으로 많이 가있음.
+            steering_control(-20); //왼쪽으로 턴해서 멀어짐
+            motor_control(1,50);
+            delay(50);
+        }
+        else{ // 정상 주행 상태 (목표 주행 값 == 센서 값)
+            steering_control(0);
+            motor_control(1,50);
+            delay(50);
+        }
+    }
+    // 오른쪽 초음파 센서 값이 무한대를 보였음.
+    motor_control(1,0); //일시 정지
+    delay(300); //옆에 벽이 사라짐 -> 턴 해야함
+    steering_control(30);
+    delay(300);
+    motor_control(1,50);
+    delay(1000); // 턴하는데 소비할 시간 - 대회에서 연습 후 값 변경 필요 (라인 2개가 딱 앞으로 보이게 만들어야함.)
+    motor_control(1,0);
+    Two_Line(); // 라인 검출을 해보자
+    delay(300); //잠시 숨 고를 시간~~
+    if (Line_Exist == 0) //아직도 라인 검출이 안됐다면..? <- 최악의 상황. [라인 감지가 됐다면 Line_Exist가 1이 되면서 정상 진행 될 것.]
+        steering_control(-30);
+        motor_control(1,50);
+        delay(100); // 너무 오른쪽으로 많이 돌아서 그런 것으로 간주, 왼쪽으로 다시 간다.
+        Line_Exist = 1; // 그러면 라인이 잡힐 것 이기에 1을 준다.
+}
+
+// ------------------ 라인 없을 때 시스템 끝 ------------------------------
+
+
+
 // -------------------------------- 셋업 START --------------------------------
 void setup() {
     // -------------------------------- 카메라/라인센싱 셋업 부분 시작 ------------------------------
-    int i;
-    for (i = 0; i < NPIXELS; i++) // NPIXELS = 128임.
+    for (int i = 0; i < NPIXELS; i++) // NPIXELS = 128임.
     {
         LineSensor_Data_Adaption[i] = 0; //이미지를 나타내는 전체 픽셀들 보정 데이터를 0으로 초기화
-        MAX_LineSensor_Data[i] = 1023; //최대값을 전부 1023으로 초기화
-        MIN_LineSensor_Data[i] = 0; //최소값을 전부 0으로 초기화
     }
     pinMode(SIpin, OUTPUT); //카메라 SI(카메라 시작) 디지털 핀 출력모드
     pinMode(CLKpin, OUTPUT); //카메라 CLK(카메라 데이터 전송 주기 동기화) 디지털 핀 출력모드
@@ -175,6 +236,7 @@ void setup() {
 // -------------------------------- 서보모터 셋업 부분 시작 --------------------------------
     Steeringservo.attach(RC_SERVO_PIN); //사용할 핀 먼저 선언
     Steeringservo.write(NEURAL_ANGLE); //선언한 핀에 기본값 지정(전방)
+    steering_control(0); //전방을 바라보도록 설정.
 // -------------------------------- 서보모터 셋업 부분 끝 --------------------------------
 // -------------------------------- DC모터 셋업 부분 시작 --------------------------------
     pinMode(MOTOR_DIR, OUTPUT); //DC모터 방향 핀을 디지털 출력 핀으로 지정
@@ -189,15 +251,15 @@ void setup() {
 void loop() {
 
     // int i;
-    motor_control(1, 70); //앞 방향으로 y의 속도만큼
-    read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
-    threshold(); // 이진화 함수
-    Two_Line();
-    if (flag_line_adapation != 1){
-        read_ultrasonic_sensor();
-        for(int i=0; i<=1; i++){
-            Serial.println(UltrasonicSensorData[i]);
-        }
+    if (Line_Exist == 1) {
+        motor_control(1, 70); //앞 방향으로 y의 속도만큼
+        read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
+        threshold(); // 이진화 함수
+        Two_Line(); // 라인 센싱 함수
+    }
+    else { //라인 감지 실패
+        No_Line_Turn();
+        No_Line_Sonar();
     }
 }
 // -------------------------------- 루프 END --------------------------------

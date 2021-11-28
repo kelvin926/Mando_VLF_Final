@@ -197,17 +197,11 @@ void No_Line_Sonar(void) {
         }
     }
     // 오른쪽 초음파 센서 값이 무한대를 보였음.
-    steering_control(30);
-    motor_control(1, 100);
-    delay(3000); // 턴하는데 소비할 시간 - 대회에서 연습 후 값 변경 필요 (라인 2개가 딱 앞으로 보이게 만들어야함.)
-    motor_control(1,0);
-    Two_Line(); // 라인 검출을 해보자
-    delay(300); //잠시 숨 고를 시간~~
-    if (Line_Exist == 0) //아직도 라인 검출이 안됐다면..? <- 최악의 상황. [라인 감지가 됐다면 Line_Exist가 1이 되면서 정상 진행 될 것.]
-        steering_control(-30);
-        motor_control(1,100);
-        delay(100); // 너무 오른쪽으로 많이 돌아서 그런 것으로 간주, 왼쪽으로 다시 간다.
-        Line_Exist = 1; // 그러면 라인이 잡힐 것 이기에 1을 준다.
+    read_ultrasonic_sensor();
+    while (UltrasonicSensorData[1] >= 50) //50cm까지 우회전
+        steering_control(30);
+        motor_control(1, 100);
+        Two_Line();
 }
 
 // ------------------ 라인 없을 때 시스템 끝 ------------------------------

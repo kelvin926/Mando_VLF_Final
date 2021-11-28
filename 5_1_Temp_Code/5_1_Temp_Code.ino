@@ -56,8 +56,6 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
 #define RC_SERVO_PIN 8 //8번핀 할당
 #define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
-#define LEFT_STEER_ANGLE -30 //좌측 스티어링 각도 지정
-#define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
 Servo Steeringservo; // 서보 모터 이름 지정~~
 
 void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
@@ -162,16 +160,12 @@ void No_Line_Turn(void){
         read_ultrasonic_sensor();
         motor_control(1,50);
         front_sensor = UltrasonicSensorData[0]; // 0 : 전방 센서 , 1 : 우측 센서
-    motor_control(1,0); // 일시정지
-    delay(300); // 0.3초 휴식
-    steering_control(30); // 위 while문이 끝나면 우측으로 30도 바퀴 회전
-    delay(300); // 0.3초 휴식
-    while (right_sensor <= 10) // 옆 센서가 20cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
+    // 이동 완료
+    while (right_sensor <= 10)
+        steering_control(30); // 옆 센서가 20cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
         motor_control(1,50);
         read_ultrasonic_sensor();
         right_sensor = UltrasonicSensorData[1];
-    motor_control(1,0);
-    delay(300); // 0.3초 휴식
     steering_control(0);
     delay(300); // 0.3초 휴식
 }
@@ -182,29 +176,23 @@ void No_Line_Sonar(void) {
     while(right_sonar_data != MAX_DISTANCE){ // 오른쪽 초음파 센서 값이 무한대 (150)을 보일 때 까지 진행
         read_ultrasonic_sensor();
         right_sonar_data = UltrasonicSensorData[1];
-        if (right_sonar_data < 150 && right_sonar_data > want_distance) { //왼쪽으로 많이 가있음.
+        if ((right_sonar_data < 150) && (right_sonar_data > want_distance)) { //왼쪽으로 많이 가있음.
             steering_control(20); //오른쪽으로 턴해서 가까워짐
             motor_control(1,50);
-            delay(50);
         }
         else if (right_sonar_data < want_distance) { //오른쪽으로 많이 가있음.
             steering_control(-20); //왼쪽으로 턴해서 멀어짐
             motor_control(1,50);
-            delay(50);
         }
         else{ // 정상 주행 상태 (목표 주행 값 == 센서 값)
             steering_control(0);
             motor_control(1,50);
-            delay(50);
         }
     }
     // 오른쪽 초음파 센서 값이 무한대를 보였음.
-    motor_control(1,0); //일시 정지
-    delay(300); //옆에 벽이 사라짐 -> 턴 해야함
     steering_control(30);
-    delay(300);
     motor_control(1,50);
-    delay(1000); // 턴하는데 소비할 시간 - 대회에서 연습 후 값 변경 필요 (라인 2개가 딱 앞으로 보이게 만들어야함.)
+    delay(3000); // 턴하는데 소비할 시간 - 대회에서 연습 후 값 변경 필요 (라인 2개가 딱 앞으로 보이게 만들어야함.)
     motor_control(1,0);
     Two_Line(); // 라인 검출을 해보자
     delay(300); //잠시 숨 고를 시간~~
@@ -252,7 +240,7 @@ void setup() {
 int start = 0;
 while (1) {
     read_ultrasonic_sensor();
-    if (UltrasonicSensorData[0] == 150) { // 앞에 장애물이 있음
+    if (UltrasonicSensorData[0] == 150) { // 앞에 장애물이 없음
         break; // 시작!
     }
 }
@@ -271,7 +259,7 @@ void loop() {
         threshold(); // 이진화 함수
         Two_Line(); // 라인 센싱 함수
     }
-    else { //라인 감지 실패
+    else { //라인 감지 실패 - Line_Exist == 0
         No_Line_Turn();
         No_Line_Sonar();
     }

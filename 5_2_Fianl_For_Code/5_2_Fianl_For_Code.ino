@@ -147,6 +147,7 @@ float UltrasonicSensorData[SONAR_NUM];//센서 데이터 1차배열 생성(실�
 void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수 
 {
     UltrasonicSensorData[0]= sonar_1.ping_cm();
+    delay(50);
     UltrasonicSensorData[1]= sonar_2.ping_cm();
     for(int i=0; i<=1; i++){
         if(UltrasonicSensorData[i] == 0.0) {    //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
@@ -162,13 +163,13 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
 // ------------------ 라인 없을 때 시스템 시작 -----------------------------
 void No_Line_Turn(void){
     int front_sensor = 300, right_sensor = 300;
-    while (front_sensor <= 50)  // 100cm 앞까지 벽이 오도록 전방으로 감. - 대회에서 연습 후 값 변경 필요
+    while (front_sensor >= 50)  // 50cm 앞까지 벽이 오도록 전방으로 감. - 대회에서 연습 후 값 변경 필요
         steering_control(0);
         read_ultrasonic_sensor();
         motor_control(1, 100);
         front_sensor = UltrasonicSensorData[0]; // 0 : 전방 센서 , 1 : 우측 센서
     // 이동 완료
-    while (right_sensor <= 50)
+    while (right_sensor >= 50)
         steering_control(30); // 옆 센서가 50cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
         motor_control(1, 100);
         read_ultrasonic_sensor();
@@ -238,7 +239,6 @@ void setup() {
     Serial.begin(115200); // 115200속도로 시리얼 전송~
 
 // 대회에서 앞에 장애물이 사라질 때 출발하는 시스템 시작 --------------------------------
-int start = 0;
 while (1) {
     read_ultrasonic_sensor();
     if (UltrasonicSensorData[0] == 200) { // 앞에 장애물이 없음
@@ -261,18 +261,19 @@ void loop() {
         Two_Line(); // 라인 센싱 함수
     }
     else { //라인 감지 실패 - Line_Exist == 0
-        if object_no_exist == 1{ //오브젝트 감지 여부 -> 없음
-            No_Line_Sonar();
-            No_Line_Turn();
-        }
-        else { // 오브젝트 감지 결과 있음
+        if (object_no_exist == 0){ //오브젝트 감지 여부 -> 있음
             read_ultrasonic_sensor();
-            while(UltrasonicSensorData[0] != 200){
+            while(UltrasonicSensorData[0] != 200) {
                 read_ultrasonic_sensor();
                 motor_control(1, 0);
-                steering_control(0)
+                steering_control(0);
             }
             object_no_exist = 1;
+            Two_Line();
+        }
+        else { // 오브젝트 감지 결과 있음
+            No_Line_Sonar();
+            No_Line_Turn();
         }
     }
 }

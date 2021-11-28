@@ -87,30 +87,35 @@ void threshold(void)
 // ------------------ 적응형 라인 검출 시스템 시작 --------------------------------
 void Two_Line(void)
 {
-    int i = 0, k = (NPIXELS-1), sum = 0, left = 0, right = 0; // left,right:좌,우 라인 내부 값
+    int i = 0, k = 0, sum = 0, left = 0, right = 0; // left,right:좌,우 라인 내부 값
     float center = 0;
     int two_steer_data = 0; // 조향값.(가중치 안더함.)
     int right_out_num, left_out_num;
-    float additional_steer_num = 1; // 조향 가중치 - 계속 변경 가능(1:기본값)
+    float additional_steer_num = 1.3; // 조향 가중치 - 계속 변경 가능(1:기본값)
 
-    
-    while(i < NPIXELS) {
-        if (LineSensor_Data_Adaption[i] == 255) { // 왼쪽부터 순차적으로 올라갈 때 처음으로 라인이 존재하는 구간 검출
-            left = i;
-            break;
+    int kill_left = 0, kill_right = 0; // 킬스위치
+    for (i = 0; i < NPIXELS; i++) {// 왼쪽부터 순차적으로 올라갈 때 처음으로 라인이 존재하는 구간 검출
+        sum += LineSensor_Data_Adaption[i];
+        if (LineSensor_Data_Adaption[i] == 255) {
+            Line_Exist = 1;
+            while(kill_left == 0) {
+                left = i;
+                kill_left = 1;
+            }
         }
-        i++; // 만약 라인이 검출이 안된다면, i = 128이 됨. (이상값)
+        sum += LineSensor_Data_Adaption[i];
+    }
+    for (i = (NPIXELS-1); i >= 0; i--) { // 오른쪽부터 순차적으로 내려올 때 처음으로 라인이 존재하는 구간 검출
+        if (LineSensor_Data_Adaption[i] == 255) {
+            Line_Exist = 1;
+            while(kill_right == 0) {
+                right = i;
+                kill_right = 1;
+            }
+        }
     }
 
-    while(-1 < k) {
-        if (LineSensor_Data_Adaption[k] == 255) { // 오른쪽부터 순차적으로 내려갈 때 처음으로 라인이 존재하는 구간 검출
-            right = k;
-            break;
-        }
-        k--; // 만약에 라인이 검출이 안된다면, k = -1이 됨. (이상값)
-    }
-
-    if (i == 128 && k == -1) { // 검출 다 돌았는데, 라인이 없을 때.
+    if (sum == 0) { // 검출 다 돌았는데, 라인이 없을 때.
         Line_Exist = 0;
     }
     else{ // 라인이 존재한다면
@@ -156,7 +161,7 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
 // ------------------ 라인 없을 때 시스템 시작 -----------------------------
 void No_Line_Turn(void){
     int front_sensor = 300, right_sensor = 300;
-    while (front_sensor <= 100)  // 100cm 앞까지 벽이 오도록 전방으로 감. - 대회에서 연습 후 값 변경 필요
+    while (front_sensor <= 50)  // 100cm 앞까지 벽이 오도록 전방으로 감. - 대회에서 연습 후 값 변경 필요
         steering_control(0);
         read_ultrasonic_sensor();
         motor_control(1,70);

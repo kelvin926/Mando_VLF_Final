@@ -193,7 +193,7 @@ void No_Line_Sonar(void) {
         }
         else{ // 정상 주행 상태 (목표 주행 값 == 센서 값)
             steering_control(0);
-            motor_control(1, 100);
+            motor_control(1, 100); 
         }
     }
     // 오른쪽 초음파 센서 값이 무한대를 보였음.

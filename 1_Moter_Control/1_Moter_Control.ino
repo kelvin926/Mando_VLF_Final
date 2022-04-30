@@ -16,13 +16,13 @@ void motor_control(int direction, int speed) //방향값, 속도값을 인수로
 
 void loop() {
   // put your main code here, to run repeatedly:
-  Serial.println("Motor Control");
+  Serial.print("Motor Control\n");
   int i;
   for(i=0; i<255; i++)
   {
     Serial.println(i); //실행시키면 값이 차례로 올라가유~
     motor_control(1,i); //실행시키면 i의 값이 올라갈수록 점점 빨라져유 (방향값: 1이면 앞으로, 0이면 뒤로감.)
-    delay(100); //0.1초씩 지연 
+    delay(100); //0.1초씩 지연 ms
   }
 
 }

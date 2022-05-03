@@ -7,10 +7,14 @@ byte Pixel[NPIXELS]; // 얼마나 측정할 것인지. <0-255> (블랙 0, 흰색
 int LineSensor_Data_Adaption[NPIXELS]; // 보정된 라인센서 데이터 배열
 int MAX_LineSensor_Data; // 센서의 최대값 정의
 int MIN_LineSensor_Data; // 센서의 최소값 정의
-int flag_line_adapation; // 라인센서 확인을 위한 플래그 변수
 #define FASTADC 1
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+
+int flag_line_adapation; // 라인센서 확인을 위한 플래그 변수
+void read_ultrasonic_sensor(void);
+int Line_Exist = 1; // 라인 존재 여부 (기본값 = 1)
+int object_no_exist = 0; // 앞에 장애물 존재 여부
 // ------------------ 카메라 초기 설정 끝 --------------------------------
 
 

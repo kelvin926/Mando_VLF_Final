@@ -3,7 +3,7 @@
 
 ///////////////// 스티어링 서보모터 컨트롤부 /////////////
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
-#define RC_SERVO_PIN 8 //8번핀 할당
+#define RC_SERVO_PIN 2 //8번핀 할당
 #define NEURAL_ANGLE 115 //기본 앵글: 90도 -> 전방 방향
 #define LEFT_STEER_ANGLE - 40 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정

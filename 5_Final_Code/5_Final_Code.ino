@@ -76,7 +76,7 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 
 // -------------------------------- 서보모터 초기 설정 시작 --------------------------------
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
-#define RC_SERVO_PIN 8 //8번핀 할당
+#define RC_SERVO_PIN 12 //8번핀 할당
 #define NEURAL_ANGLE 90 //기본 앵글: 115도 -> 전방 방향
 #define LEFT_STEER_ANGLE -30 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정

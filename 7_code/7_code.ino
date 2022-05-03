@@ -76,8 +76,8 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 
 // -------------------------------- 서보모터 초기 설정 시작 --------------------------------
 #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
-#define RC_SERVO_PIN 40 //12번핀 할당
-#define NEURAL_ANGLE 85 //기본 앵글: 115도 -> 전방 방향
+#define RC_SERVO_PIN 12 //12번핀 할당
+#define NEURAL_ANGLE 90 //기본 앵글: 115도 -> 전방 방향
 #define LEFT_STEER_ANGLE -30 //좌측 스티어링 각도 지정
 #define RIGHT_STEER_ANGLE 30 //우측 스티어링 각도 지정
 Servo Steeringservo; //서보를 사용하는 함수를 미리 선언
@@ -126,16 +126,45 @@ void Two_Line(void)
             right = i;
         }
     }
+
+
     Serial.print("왼쪽 값은 ");
     Serial.println(left);
     Serial.print("오른쪽 값은 ");
     Serial.println(right);
     center = ((left + right)/2);
     two_steer_data = center - 64;
+    int alpha = 15;               // 라인 한줄의 왼쪽 오른쪽 폭 길이
+    int beta = 70;               // 라인과 라인 사이의 검은 공간의 폭 길이
+    int point = (right - left) * 100 /127;             
+
+    if (right - left <= alpha) {                                      // 15는 어림잡아서 라인 한줄의 왼쪽 오른쪽 폭 길이이다
+        if (point > 50) {
+            if (center * 100 /127 > 25) {
+                two_steer_data = center - 64 + (alpha/2) + (beta/2);
+            }
+
+            if (center * 100 /127 < 25) {
+                two_steer_data = center - 64 - (alpha/2) - (beta/2);
+            }
+        }
+
+        if (point < 50) {
+            if (center * 100 /127 < 75) {
+                two_steer_data = center - 64 + (alpha/2) + (beta/2);
+            }
+
+            if (center * 100 /127 > 75) {
+                two_steer_data = center - 64 - (alpha/2) - (beta/2);
+            }
+        }
+    }
     Serial.println(two_steer_data);
-    steering_control(two_steer_data);
+    steering_control(two_steer_data*5);
 }
 // ------------------ 적응형 라인 검출 시스템 끝 ------------------------------
+
+
 
 
 
@@ -197,12 +226,6 @@ void setup() {
     pinMode(MOTOR_PWM, OUTPUT); //DC모터 속도 핀을 디지털 출력 핀으로 지정
 // -------------------------------- DC모터 셋업 부분 끝 --------------------------------
     Serial.begin(115200); // 115200속도로 시리얼 전송~
-//    while(1){ // 스타트 함수
-//        read_ultrasonic_sensor();
-//        if UltrasonicSensorData[0] >= 100 {
-//            break;
-//        }
-//    }
 }
 // -------------------------------- 셋업 END --------------------------------
 

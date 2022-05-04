@@ -95,6 +95,8 @@ void threshold(void)
 // ------------------ 적응형 라인 검출 시스템 시작 --------------------------------
 void Two_Line(void)
 {
+    read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
+    threshold(); // 이진화 함수
     int i;
     int left, right; //좌,우 라인 내부 값
     int center;
@@ -152,7 +154,7 @@ void Two_Line(void)
             }
         }
         Serial.println(two_steer_data);
-        steering_control(two_steer_data*3);
+        steering_control(two_steer_data*3); // 가중치
     }
 }
 // ------------------ 적응형 라인 검출 시스템 끝 ------------------------------
@@ -296,8 +298,6 @@ void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 void loop() {
     if (Line_Exist == 1) {
         motor_control(1, 100); //앞 방향으로 y의 속도만큼
-        read_line_sensor(); //라인 센싱부 작동~ -> 보정한 데이터 얻음.
-        threshold(); // 이진화 함수
         Two_Line(); // 라인 센싱 함수
     }
     else { //라인 감지 실패 - Line_Exist == 0

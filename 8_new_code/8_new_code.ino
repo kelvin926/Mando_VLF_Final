@@ -5,8 +5,8 @@
 #define NPIXELS 128 // 해상도
 byte Pixel[NPIXELS]; // 얼마나 측정할 것인지. <0-255> (블랙 0, 흰색 255)
 int LineSensor_Data_Adaption[NPIXELS]; // 보정된 라인센서 데이터 배열
-int MAX_LineSensor_Data[NPIXELS]; // 센서의 최대값 정의
-int MIN_LineSensor_Data[NPIXELS]; // 센서의 최소값 정의
+int MAX_LineSensor_Data = 0; // 센서의 최대값 정의 (임의값)
+int MIN_LineSensor_Data = 99999; // 센서의 최소값 정의 (임의값)
 #define FASTADC 1 // 데이터 가속화
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
@@ -14,6 +14,7 @@ void read_ultrasonic_sensor(void);
 int Line_Exist = 1; // 라인 존재 여부 (기본값 = 1)
 int object_exist = 0; // 앞에 장애물 존재 여부
 // ------------------ 카메라 초기 설정 끝 --------------------------------
+
 #define SONAR_NUM 3 //초음파 센서 수
 #define MAX_DISTANCE 200 //cm단위 최대 값 (초음파 최대값)
 
@@ -36,6 +37,13 @@ void read_line_sensor(void) //라인 센싱부
         delayMicroseconds (1); // 1ms대기
         digitalWrite (CLKpin, HIGH); //CLK핀 작동상태 - 데이터 동기화 시작 (이게, 데이터가 많으니까 한 픽셀에 들어갈 양만 clk값에 따라 딱 넣고 멈췄다가 다음 픽셀에 넣고 멈췄다가 이런 느낌인가봐.)
     }
+    
+    line_adaptation();
+
+    for (i = 0; i < NPIXELS; i++) // 0 ~ 1023까지의 데이터를 2번 과정을 거친 뒤에 -> 0 ~ 256
+    {
+        LineSensor_Data_Adaption[i] = map(Pixel[i], MIN_LineSensor_Data, MAX_LineSensor_Data, 0, 256);
+    }
 }
 // ------------------ 라인 센싱 초기 설정 끝 --------------------------------
 
@@ -52,6 +60,19 @@ void motor_control(int direction, int speed) //dc모터 컨트롤 함수 생성
 }
 // ------------------ DC모터 초기 설정 끝 --------------------------------
 
+void line_adaptation(void) // 라인 보정부
+{
+    int i;
+    for (i = 0; i < NPIXELS; i++)
+    {
+        if (LineSensor_Data_Adaption[i] >= MAX_LineSensor_Data)  
+            MAX_LineSensor_Data = LineSensor_Data_Adaption[i]; 
+        //센서 데이터가 이전의 최대 데이터보다 클 경우, 최대 데이터를 센서 데이터로 입력
+        if (LineSensor_Data_Adaption[i] <= MIN_LineSensor_Data)
+            MIN_LineSensor_Data = LineSensor_Data_Adaption[i]; 
+        //센서 데이터가 이전의 최소 데이터보다 작을 경우, 최소 데이터를 센서 데이터로 입력
+    }
+}
 
 // -------------------------------- 이진화 시스템 시작 --------------------------------
 #define threshold_value 150
@@ -140,20 +161,21 @@ void Two_Line(void)
 
 // -------------------------------- 초음파 시스템 시작 --------------------------------
 #include <NewPing.h> //초음파 관련 헤더파일임! (설치 필요)
-float UltrasonicSensorData[SONAR_NUM];//센서 데이터 1차배열 생성(실수)
+float UltrasonicSensorData[SONAR_NUM]; //센서 데이터 1차배열 생성(실수)
 
-    NewPing sonar_1(2, 3, MAX_DISTANCE);
-    NewPing sonar_2(9, 10, MAX_DISTANCE); // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정)
+NewPing sonar[SONAR_NUM] = {   // 초음파센서 배열 생성 
+    NewPing(8, 9, MAX_DISTANCE),  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정) 앞
+    NewPing(2, 3, MAX_DISTANCE),  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정) 왼쪽
+    NewPing(10, 11, MAX_DISTANCE)  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정) 오른쪽
+};
 
 void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수 
 {
-    UltrasonicSensorData[0]= sonar_1.ping_cm();
-    delay(50);
-    UltrasonicSensorData[1]= sonar_2.ping_cm();
-    for(int i=0; i<=1; i++){
-        if(UltrasonicSensorData[i] == 0.0) {    //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
+    for(int i=0; i<3; i++){
+        UltrasonicSensorData[i]= sonar[i].ping_cm(); //해당 배열에 첫번째 초음파 센서를 이용한 cm단위의 값을 넣음
+        if(UltrasonicSensorData[i] == 0.0) //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
+        {
             UltrasonicSensorData[i] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
-             Serial.println(UltrasonicSensorData[i]); //DEBUG
         }
     }
     if UltrasonicSensorData[0] == 200 {
@@ -174,13 +196,13 @@ void No_Line_Turn(void){
         steering_control(0);
         read_ultrasonic_sensor();
         motor_control(1, 100);
-        front_sensor = UltrasonicSensorData[0]; // 0 : 전방 센서 , 1 : 우측 센서
+        front_sensor = UltrasonicSensorData[0]; // 0 : 전방 센서 , 2 : 우측 센서
 // 이동 완료
     while (right_sensor >= 30)
         steering_control(30); // 옆 센서가 30cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
         motor_control(1, 100);
         read_ultrasonic_sensor();
-        right_sensor = UltrasonicSensorData[1];
+        right_sensor = UltrasonicSensorData[2];
     steering_control(0);
     delay(300); // 0.3초 휴식
 }
@@ -190,7 +212,7 @@ void No_Line_Sonar(void) { // 미로 속
     int want_distance = 50; // 미로 속에서 원하는 오른쪽부터의 유지 거리 값. (cm) -> 대회에서 연습 후 값 변경 필요
     while(right_sonar_data != MAX_DISTANCE){ // 오른쪽 초음파 센서 값이 무한대 (200)을 보일 때 까지 진행
         read_ultrasonic_sensor();
-        right_sonar_data = UltrasonicSensorData[1];
+        right_sonar_data = UltrasonicSensorData[2];
         if ((right_sonar_data < 200) && (right_sonar_data > want_distance)) { //무한대는 아닌데, 왼쪽으로 많이 가있음.
             steering_control(20); //오른쪽으로 턴해서 가까워짐
             motor_control(1, 100);
@@ -206,7 +228,7 @@ void No_Line_Sonar(void) { // 미로 속
     }
     // 오른쪽 초음파 센서 값이 무한대를 보였음. 2번째 우회전
     read_ultrasonic_sensor();
-    while (UltrasonicSensorData[1] >= 50) //50cm까지 우회전
+    while (UltrasonicSensorData[2] >= 50) //50cm까지 우회전
         steering_control(30);
         motor_control(1, 100);
     Two_Line(); //다시 라인 트레이싱

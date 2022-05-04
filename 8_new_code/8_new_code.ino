@@ -1,3 +1,7 @@
+#include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
+#define RC_SERVO_PIN 40 //8번핀 할당
+#define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
+Servo Steeringservo;
 // ---------------카메라 초기 설정 시작---------------
 #define AOpin  A0 // Analog output - 카메라 데이터 통신
 #define SIpin  11 // Start Integration 디지털 11핀 - 카메라 데이터 전송을 알리는 핀
@@ -118,7 +122,7 @@ void Two_Line(void)
         sum += LineSensor_Data_Adaption[i];
     }
 
-    if sum == 0 { // 라인 없음
+    if(sum == 0) { // 라인 없음
         Line_Exist = 0;
     }
 
@@ -180,10 +184,10 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
             UltrasonicSensorData[i] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
         }
     }
-    if UltrasonicSensorData[0] == 200 {
+    if (UltrasonicSensorData[0] == 200) {
         object_exist = 0;
     }
-    if UltrasonicSensorData[0] != 200 {
+    if(UltrasonicSensorData[0] != 200) {
         object_exist = 1;
     }
 }
@@ -242,6 +246,7 @@ void No_Line_Sonar(void) { // 미로 속
 
 // -------------------------------- 셋업 START --------------------------------
 void setup() {
+
     // -------------------------------- 카메라/라인센싱 셋업 부분 시작 ------------------------------
     for (int i = 0; i < NPIXELS; i++) // NPIXELS = 128임.
     {
@@ -270,22 +275,19 @@ void setup() {
     Serial.begin(115200); // 115200속도로 시리얼 전송~
 
 // 대회에서 앞에 장애물이 사라질 때 출발하는 시스템 시작 --------------------------------
-while (1) {
-    read_ultrasonic_sensor();
-    if (UltrasonicSensorData[0] == MAX_DISTANCE) { // 앞에 장애물이 없음
-        break; // 시작!
-    }
-}
+// while (1) {
+//     read_ultrasonic_sensor();
+//     if (UltrasonicSensorData[0] == MAX_DISTANCE) { // 앞에 장애물이 없음
+//         break; // 시작!
+//     }
+// }
 // 대회에서 앞에 장애물이 사라질 때 출발하는 시스템 끝 --------------------------------
 } 
 // -------------------------------- 셋업 END --------------------------------
 
 
 // -------------------------------- 서보모터 초기 설정 시작 --------------------------------
-#include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
-#define RC_SERVO_PIN 8 //8번핀 할당
-#define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
-Servo Steeringservo; // 서보 모터 이름 지정~~
+
 
 void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 {

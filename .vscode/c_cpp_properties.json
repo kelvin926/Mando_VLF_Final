@@ -18,7 +18,7 @@
             "includePath": [
                 "/Applications/Arduino.app/Contents/Java/hardware/arduino/avr/cores/arduino",
                 "/Applications/Arduino.app/Contents/Java/hardware/arduino/avr/variants/mega",
-                "/Applications/Arduino.app/Contents/Java/libraries/Servo/src",
+                "/Users/kelvin/Documents/Arduino/libraries/Servo/src",
                 "/Users/kelvin/Documents/Arduino/libraries/NewPing/src",
                 "/Applications/Arduino.app/Contents/Java/hardware/tools/avr/lib/gcc/avr/7.3.0/include",
                 "/Applications/Arduino.app/Contents/Java/hardware/tools/avr/lib/gcc/avr/7.3.0/include-fixed",

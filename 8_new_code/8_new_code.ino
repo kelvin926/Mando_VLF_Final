@@ -1,4 +1,4 @@
-#include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
+ #include <Servo.h> //Servo라이브러리 아두이노 프로그램에 설치해야합니당 아마 기본으로 깔려있을껄..?
 #define RC_SERVO_PIN 40 //8번핀 할당
 #define NEURAL_ANGLE 90 //기본 앵글: 90도 -> 전방 방향
 Servo Steeringservo;
@@ -17,9 +17,10 @@ int MIN_LineSensor_Data = 99999; // 센서의 최소값 정의 (임의값)
 void read_ultrasonic_sensor(void);
 int Line_Exist = 1; // 라인 존재 여부 (기본값 = 1)
 int object_exist = 0; // 앞에 장애물 존재 여부
+int right_turn = 0;
 // ------------------ 카메라 초기 설정 끝 --------------------------------
 
-#define SONAR_NUM 3 //초음파 센서 수
+#define SONAR_NUM 2 //초음파 센서 수
 #define MAX_DISTANCE 200 //cm단위 최대 값 (초음파 최대값)
 
 // ------------------ 라인 센싱 초기 설정 시작 --------------------------------
@@ -79,7 +80,7 @@ void line_adaptation(void) // 라인 보정부
 }
 
 // -------------------------------- 이진화 시스템 시작 --------------------------------
-#define threshold_value 150
+#define threshold_value 15
 void threshold(void)
 {
     int i;
@@ -127,38 +128,39 @@ void Two_Line(void)
     }
 
     else {
-        Serial.print("왼쪽 값은 ");
+        Serial.print("left line ");
         Serial.println(left);
-        Serial.print("오른쪽 값은 ");
+        Serial.print("right line ");
         Serial.println(right);
         center = ((left + right)/2);
         two_steer_data = center - 64;
         int alpha = 15;               // 라인 한줄의 왼쪽 오른쪽 폭 길이
         int beta = 70;               // 라인과 라인 사이의 검은 공간의 폭 길이
-        int point = (right - left) * 100 /127;             
+        int point = ((right - left) * 100)/128;
         if (right - left <= alpha) {          // 15는 어림잡아서 라인 한줄의 왼쪽 오른쪽 폭 길이이다
             if (point > 50) {
-                if (center * 100 /127 >= 25) {
+                if (center * 100 /128 >= 25) {
                     two_steer_data = center - 64 + (alpha/2) + (beta/2);
                 }
 
-                if (center * 100 /127 < 25) {
+                if (center * 100 /128 < 25) {
                     two_steer_data = center - 64 - (alpha/2) - (beta/2);
                 }
             }
 
             if (point < 50) {
-                if (center * 100 /127 <= 75) {
+                if (center * 100 /128 <= 75) {
                     two_steer_data = center - 64 + (alpha/2) + (beta/2);
                 }
 
-                if (center * 100 /127 > 75) {
+                if (center * 100 /128 > 75) {
                     two_steer_data = center - 64 - (alpha/2) - (beta/2);
                 }
             }
         }
+        Serial.print("steer num");
         Serial.println(two_steer_data);
-        steering_control(two_steer_data*3); // 가중치
+        steering_control(two_steer_data*2.7); // 가중치
     }
 }
 // ------------------ 적응형 라인 검출 시스템 끝 ------------------------------
@@ -170,26 +172,35 @@ void Two_Line(void)
 float UltrasonicSensorData[SONAR_NUM]; //센서 데이터 1차배열 생성(실수)
 
 NewPing sonar[SONAR_NUM] = {   // 초음파센서 배열 생성 
-    NewPing(8, 9, MAX_DISTANCE),  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정) 앞
-    NewPing(2, 3, MAX_DISTANCE),  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정) 왼쪽
-    NewPing(10, 11, MAX_DISTANCE)  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정) 오른쪽
+    NewPing(46, 47, MAX_DISTANCE),  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정) 앞
+    NewPing(52, 53, MAX_DISTANCE),  // NewPing(Trig(송신)핀 번호, Echo(수신)핀 번호, 최대측정거리) [초음파] (개체 설정) 오른쪽
 };
 
 void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수 
 {
-    for(int i=0; i<3; i++){
-        UltrasonicSensorData[i]= sonar[i].ping_cm(); //해당 배열에 첫번째 초음파 센서를 이용한 cm단위의 값을 넣음
-        if(UltrasonicSensorData[i] == 0.0) //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
-        {
-            UltrasonicSensorData[i] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
-        }
-    }
+    UltrasonicSensorData[0] = sonar[0].ping_cm();
+    UltrasonicSensorData[1] = sonar[1].ping_cm();
+    // if(UltrasonicSensorData[0] == 0.0) //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
+    // {
+    //     UltrasonicSensorData[0] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
+    // }
+    // if(UltrasonicSensorData[1] == 0.0) //0.0을 넣었을 경우(완전 붙었다기보단 너무 멀어져서 값이 0이 된 것.)
+    // {
+    //     UltrasonicSensorData[1] = (float)MAX_DISTANCE; //측정값이 매우 커서 0이 나왔을 경우, 넣을 수 있는 최대값을 넣는다.
+    // }
+    
     if (UltrasonicSensorData[0] == 200) {
         object_exist = 0;
+        Serial.println("전방 오브젝트 있음");
     }
     if(UltrasonicSensorData[0] != 200) {
         object_exist = 1;
+        Serial.println("전방 오브젝트 없음");
     }
+    Serial.println("front sonar");
+    Serial.println(UltrasonicSensorData[0]);
+    Serial.println("right sonar");
+    Serial.println(UltrasonicSensorData[1]);
 }
 // -------------------------------- 초음파 시스템 끝 --------------------------------
 
@@ -198,17 +209,21 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
 // ------------------ 라인 없을 때 시스템 시작 -----------------------------
 void No_Line_Turn(void){
     int front_sensor = 300, right_sensor = 300;
-    while (front_sensor >= 50)  // 50cm 앞까지 벽이 오도록 전방으로 감. - 대회에서 연습 후 값 변경 필요
+    while (front_sensor >= 50) {  // 50cm 앞까지 벽이 오도록 전방으로 감. - 대회에서 연습 후 값 변경 필요
+        Serial.println("전방 센서 감지 중");
         steering_control(0);
         read_ultrasonic_sensor();
-        motor_control(1, 100);
+        motor_control(1, 70);
         front_sensor = UltrasonicSensorData[0]; // 0 : 전방 센서 , 2 : 우측 센서
+    }
 // 이동 완료
-    while (right_sensor >= 30)
-        steering_control(30); // 옆 센서가 30cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
-        motor_control(1, 100);
+    while (right_sensor >= 30) { // 옆 센서가 30cm값을 가질 때 까지 우회전 - 대회에서 연습 후 값 변경 필요
+        Serial.println("1차 노라인 우회전 중");
+        steering_control(30);
+        motor_control(1, 70);
         read_ultrasonic_sensor();
-        right_sensor = UltrasonicSensorData[2];
+        right_sensor = UltrasonicSensorData[1];
+    }
     steering_control(0);
     delay(300); // 0.3초 휴식
 }
@@ -218,25 +233,28 @@ void No_Line_Sonar(void) { // 미로 속
     int want_distance = 50; // 미로 속에서 원하는 오른쪽부터의 유지 거리 값. (cm) -> 대회에서 연습 후 값 변경 필요
     while(right_sonar_data != MAX_DISTANCE){ // 오른쪽 초음파 센서 값이 무한대 (200)을 보일 때 까지 진행
         read_ultrasonic_sensor();
-        right_sonar_data = UltrasonicSensorData[2];
+        right_sonar_data = UltrasonicSensorData[1];
         if ((right_sonar_data < 200) && (right_sonar_data > want_distance)) { //무한대는 아닌데, 왼쪽으로 많이 가있음.
             steering_control(20); //오른쪽으로 턴해서 가까워짐
-            motor_control(1, 100);
+            motor_control(1, 70);
         }
         else if (right_sonar_data < want_distance) { //오른쪽으로 많이 가있음.
             steering_control(-20); //왼쪽으로 턴해서 멀어짐
-            motor_control(1, 100);
+            motor_control(1, 70);
         }
         else{ // 정상 주행 상태 (목표 주행 값 == 센서 값)
             steering_control(0);
-            motor_control(1, 100); 
+            motor_control(1, 70); 
         }
     }
+    Serial.println("2차 우회전 순간");
     // 오른쪽 초음파 센서 값이 무한대를 보였음. 2번째 우회전
     read_ultrasonic_sensor();
-    while (UltrasonicSensorData[2] >= 50) //50cm까지 우회전
+    while (UltrasonicSensorData[1] >= 50) //50cm까지 우회전
+        read_ultrasonic_sensor();
+        Serial.println("2차 노라인 우회전 중");
         steering_control(30);
-        motor_control(1, 100);
+        motor_control(1, 70);
     Two_Line(); //다시 라인 트레이싱
 }
 
@@ -275,12 +293,12 @@ void setup() {
     Serial.begin(115200); // 115200속도로 시리얼 전송~
 
 // 대회에서 앞에 장애물이 사라질 때 출발하는 시스템 시작 --------------------------------
-// while (1) {
-//     read_ultrasonic_sensor();
-//     if (UltrasonicSensorData[0] == MAX_DISTANCE) { // 앞에 장애물이 없음
-//         break; // 시작!
-//     }
-// }
+    while (1) {
+        read_ultrasonic_sensor();
+    if (object_exist == 1) { // 앞에 장애물이 없음
+        break; // 시작!
+    }
+}
 // 대회에서 앞에 장애물이 사라질 때 출발하는 시스템 끝 --------------------------------
 } 
 // -------------------------------- 셋업 END --------------------------------
@@ -299,7 +317,8 @@ void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 // -------------------------------- 루프 START --------------------------------
 void loop() {
     if (Line_Exist == 1) {
-        motor_control(1, 100); //앞 방향으로 y의 속도만큼
+        read_ultrasonic_sensor();
+        motor_control(1, 70); //앞 방향으로 y의 속도만큼
         Two_Line(); // 라인 센싱 함수
     }
     else { //라인 감지 실패 - Line_Exist == 0
@@ -307,7 +326,7 @@ void loop() {
         if (object_exist == 0){ //오브젝트 감지 여부 -> 없음
             read_ultrasonic_sensor();
             steering_control(0);
-            motor_control(1, 10);
+            motor_control(1, 70);
             delay(300);
             read_ultrasonic_sensor();
             Two_Line();

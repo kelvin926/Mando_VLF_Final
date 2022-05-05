@@ -59,7 +59,7 @@ void read_line_sensor(void) //라인 센싱부
 
 void steering_control(int steer_angle) //앞바퀴 스티어링 함수.
 {
-    Steeringservo.write(NEURAL_ANGLE + steer_angle);  // 기본값(90도)에 앵글 값 대입하여 스티어링 작동
+    Steeringservo.write(NEURAL_ANGLE + (steer_angle*3));  // 기본값(90도)에 앵글 값 대입하여 스티어링 작동
 }   
 
 
@@ -84,7 +84,6 @@ void Two_Line(void)
     float center = 0;
     int two_steer_data = 0; // 조향값.(가중치 안더함.)
     int right_out_num, left_out_num;
-    float additional_steer_num = 1.3; // 조향 가중치 - 계속 변경 가능(1:기본값)
 
     int kill_left = 0, kill_right = 0; // 킬스위치
     for (i = 0; i < NPIXELS; i++) {// 왼쪽부터 순차적으로 올라갈 때 처음으로 라인이 존재하는 구간 검출
@@ -120,7 +119,7 @@ void Two_Line(void)
         center = ((left + right)/2);
         two_steer_data = center - 64; // 양수면 오른쪽으로, 음수면 왼쪽으로 움직임.
         Serial.println(two_steer_data); // DEBUG
-        steering_control(two_steer_data * additional_steer_num); // 가중치 : additional_steer_num -> 조향값을 더 줘야함.
+        steering_control(two_steer_data); // 가중치 : additional_steer_num -> 조향값을 더 줘야함.
     }
 }
 
@@ -140,10 +139,10 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
     UltrasonicSensorData[0] = sonar[0].ping_cm();
     UltrasonicSensorData[1] = sonar[1].ping_cm();
     
-    if UltrasonicSensorData[0] == 0 {
+    if (UltrasonicSensorData[0] == 0) {
         UltrasonicSensorData[0] = MAX_DISTANCE;
     }
-    if UltrasonicSensorData[1] == 0 {
+    if (UltrasonicSensorData[1] == 0) {
         UltrasonicSensorData[1] = MAX_DISTANCE;
     }
 
@@ -164,23 +163,23 @@ void read_ultrasonic_sensor(void) //초음파 값 읽어들이는 함수
 void No_Line_Sonar(void) { // 미로 속
     read_ultrasonic_sensor();
     int right_sonar_data = 300; //우측 초음파 센서 값 (일부러 150 이상인 300값을 줌(이상값)) [오차 감안해도, 수월한 전진을 위해 int형을 줌.]
-    int want_distance = 50; // 미로 속에서 원하는 오른쪽부터의 유지 거리 값. (cm) -> 대회에서 연습 후 값 변경 필요
+    int want_distance = 10; // 미로 속에서 원하는 오른쪽부터의 유지 거리 값. (cm) -> 대회에서 연습 후 값 변경 필요
     while(right_sonar_data != MAX_DISTANCE){ // 오른쪽 초음파 센서 값이 무한대 (200)을 보일 때 까지 진행
         read_ultrasonic_sensor();
         right_sonar_data = UltrasonicSensorData[1];
         if (right_sonar_data > want_distance) { //무한대는 아닌데, 왼쪽으로 많이 가있음.
             steering_control(30); //오른쪽으로 턴해서 가까워짐
-            motor_control(1, 70);
+            motor_control(1, 100);
             delay(100);
         }
         else if (right_sonar_data < want_distance) { //오른쪽으로 많이 가있음.
             steering_control(-30); //왼쪽으로 턴해서 멀어짐
-            motor_control(1, 70);
+            motor_control(1, 100);
             delay(100);
         }
         else{ // 정상 주행 상태 (목표 주행 값 == 센서 값)
             steering_control(0);
-            motor_control(1, 70); 
+            motor_control(1, 100); 
             delay(100);
         }
     }
@@ -215,29 +214,29 @@ void setup() {
 }
 
 void loop() {
-    motor_control(1,70);
+    motor_control(1,100);
     Two_Line(); // 라인트레이싱
-    if right_turn == 0 {
+    if (right_turn == 0) {
         read_ultrasonic_sensor(); //초음파 확인
     }
     else {
         UltrasonicSensorData[0] = MAX_DISTANCE + 100;
         UltrasonicSensorData[1] = MAX_DISTANCE + 100;
     }
-    if (UltrasonicSensorData[0] <= 30){
+    if (UltrasonicSensorData[0] <= 10){
         read_ultrasonic_sensor();
-        while(UltrasonicSensorData[1] >= 20) {
+        while(UltrasonicSensorData[1] >= 10) {
             read_ultrasonic_sensor();
-            steering_control(1, 30);
-            motor_control(1,70);
+            steering_control(30);
+            motor_control(1,100);
         }
         No_Line_Sonar;
         // 2차 우회전
         read_ultrasonic_sensor();
-        while(UltrasonicSensorData[1] <= 20){
+        while(UltrasonicSensorData[1] <= 10){
             read_ultrasonic_sensor();
-            steering_control(1, 30);
-            motor_control(1,70);
+            steering_control(30);
+            motor_control(1,100);
         }
         right_turn = 1; // 2차 턴 완료한 뒤에는 초음파 끔
     }
